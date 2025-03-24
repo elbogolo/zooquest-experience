@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
@@ -129,28 +130,55 @@ const SettingsPage = () => {
             <h2 className="text-lg font-medium px-4 pt-4 pb-2 text-foreground">{section.title}</h2>
             <div className="divide-y divide-border">
               {section.items.map((item, itemIdx) => {
-                const Component = item.path ? Link : "button";
-                const props = item.path 
-                  ? { to: item.path } 
-                  : item.onClick 
-                    ? { onClick: item.onClick }
-                    : {};
-
-                return (
-                  <Component
-                    key={itemIdx}
-                    {...props}
-                    className={`w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors text-foreground`}
-                  >
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-zoo-secondary flex items-center justify-center text-zoo-primary mr-3">
-                        {item.icon}
+                if (item.path) {
+                  return (
+                    <Link
+                      key={itemIdx}
+                      to={item.path}
+                      className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors text-foreground"
+                    >
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded-full bg-zoo-secondary flex items-center justify-center text-zoo-primary mr-3">
+                          {item.icon}
+                        </div>
+                        <span className={item.labelClass || ""}>{item.label}</span>
                       </div>
-                      <span className={item.labelClass || ""}>{item.label}</span>
+                      {item.action}
+                    </Link>
+                  );
+                } else if (item.onClick) {
+                  return (
+                    <Button
+                      key={itemIdx}
+                      onClick={item.onClick}
+                      variant="ghost"
+                      className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors text-foreground h-auto"
+                    >
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded-full bg-zoo-secondary flex items-center justify-center text-zoo-primary mr-3">
+                          {item.icon}
+                        </div>
+                        <span className={item.labelClass || ""}>{item.label}</span>
+                      </div>
+                      {item.action}
+                    </Button>
+                  );
+                } else {
+                  return (
+                    <div
+                      key={itemIdx}
+                      className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors text-foreground"
+                    >
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded-full bg-zoo-secondary flex items-center justify-center text-zoo-primary mr-3">
+                          {item.icon}
+                        </div>
+                        <span className={item.labelClass || ""}>{item.label}</span>
+                      </div>
+                      {item.action}
                     </div>
-                    {item.action}
-                  </Component>
-                );
+                  );
+                }
               })}
             </div>
           </div>
