@@ -1,5 +1,5 @@
 
-import { Home, Search, Bookmark, Map, User } from "lucide-react";
+import { Home, Search, Bookmark, Map, User, Calendar } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const BottomNavbar = () => {
@@ -9,7 +9,7 @@ const BottomNavbar = () => {
   const navItems = [
     { icon: Home, label: "Home", path: "/" },
     { icon: Search, label: "Search", path: "/search" },
-    { icon: Bookmark, label: "Visit List", path: "/visit-list" },
+    { icon: Calendar, label: "Events", path: "/events" },
     { icon: Map, label: "Map", path: "/map" },
     { icon: User, label: "Profile", path: "/profile" },
   ];

@@ -16,6 +16,9 @@ import EditProfilePage from "./pages/EditProfilePage";
 import AuthPage from "./pages/AuthPage";
 import SplashPage from "./pages/SplashPage";
 import NotFound from "./pages/NotFound";
+import EventsPage from "./pages/EventsPage";
+import AdminPage from "./pages/AdminPage";
+import ARPage from "./pages/ARPage";
 
 const queryClient = new QueryClient();
 
@@ -32,9 +35,11 @@ const App = () => (
           <Route path="/visit-list" element={<VisitListPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/profile/edit" element={<ProfilePage />} />
-          <Route path="/settings" element={<ProfilePage />} />
           <Route path="/profile/edit" element={<EditProfilePage />} />
+          <Route path="/settings" element={<ProfilePage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/ar" element={<ARPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/splash" element={<SplashPage />} />
           <Route path="*" element={<NotFound />} />
