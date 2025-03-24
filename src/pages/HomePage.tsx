@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Settings, Map as MapIcon, Calendar, Camera, Users } from "lucide-react";
+import { Settings, Map as MapIcon, Calendar, Camera, Users, Bookmark } from "lucide-react";
 import { Link } from "react-router-dom";
 import AnimalCard from "../components/AnimalCard";
 import SearchBar from "../components/SearchBar";
