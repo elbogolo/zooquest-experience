@@ -1,13 +1,14 @@
 
 import { useState, useEffect } from "react";
 import { Settings, Map as MapIcon, Calendar, Camera, Users, Bookmark } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AnimalCard from "../components/AnimalCard";
 import SearchBar from "../components/SearchBar";
 import BottomNavbar from "../components/BottomNavbar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import UserAvatar from "@/components/UserAvatar";
 
 // Sample data for animals
 const popularAnimals = [
@@ -45,6 +46,7 @@ const todayEvents = [
 ];
 
 const HomePage = () => {
+  const navigate = useNavigate();
   const [greeting, setGreeting] = useState("");
   const [name, setName] = useState("Guest");
   const [search, setSearch] = useState("");
@@ -70,7 +72,20 @@ const HomePage = () => {
     e.preventDefault();
     if (search.trim()) {
       toast.info(`Searching for "${search}"`);
+      navigate(`/search?q=${encodeURIComponent(search)}`);
     }
+  };
+
+  const handleAnimalCardClick = (id: string) => {
+    navigate(`/animals/${id}`);
+  };
+
+  const handleToggleFavorite = (id: string, isFavorite: boolean) => {
+    // In a real app, we would update the database
+    toast.success(`${isFavorite ? 'Added to' : 'Removed from'} favorites`);
+    
+    // Update the local state (in a real app this would be from a context or state manager)
+    popularAnimals.find(animal => animal.id === id)!.isFavorite = isFavorite;
   };
 
   return (
@@ -83,11 +98,12 @@ const HomePage = () => {
           </h1>
           <p className="text-muted-foreground">Explore the Zoo</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <ThemeToggle />
-          <Link to="/settings">
+          <Link to="/settings" className="flex items-center justify-center">
             <Settings className="w-6 h-6 text-foreground" />
           </Link>
+          <UserAvatar size="sm" />
         </div>
       </header>
 
@@ -142,7 +158,7 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Popular places */}
+      {/* Popular animals */}
       <div className="px-5 mb-6">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-lg font-semibold text-foreground">Popular animals</h2>
@@ -158,6 +174,8 @@ const HomePage = () => {
               name={animal.name}
               image={animal.image}
               isFavorite={animal.isFavorite}
+              onClick={() => handleAnimalCardClick(animal.id)}
+              onToggleFavorite={(isFavorite) => handleToggleFavorite(animal.id, isFavorite)}
             />
           ))}
         </div>
@@ -184,7 +202,7 @@ const HomePage = () => {
                 <p className="text-sm text-muted-foreground">{event.time} • {event.location}</p>
               </div>
               <Button variant="outline" size="sm" asChild>
-                <Link to="/events">Details</Link>
+                <Link to={`/events/${event.id}`}>Details</Link>
               </Button>
             </div>
           ))}
