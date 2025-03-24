@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { 
   ChevronLeft, 
   Heart, 
-  NavigationArrow, 
+  Navigation, 
   Info, 
   Bookmark,
   Share
@@ -184,7 +183,7 @@ const AnimalDetail = () => {
         </button>
         
         <Link to={`/map?destination=${animal.id}`} className="flex-1 zoo-button flex items-center justify-center gap-2">
-          <NavigationArrow size={18} />
+          <Navigation size={18} />
           <span>Visit Now</span>
         </Link>
       </div>

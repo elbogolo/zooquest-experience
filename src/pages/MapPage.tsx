@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Navigation, MapPin, Compass, X, RotateCcw } from "lucide-react";
@@ -6,7 +5,6 @@ import PageHeader from "../components/PageHeader";
 import BottomNavbar from "../components/BottomNavbar";
 import SearchBar from "../components/SearchBar";
 
-// Sample locations of animals in the zoo for demonstration
 const zooLocations = {
   lion: {
     name: "Lion Enclosure",
@@ -35,8 +33,6 @@ const MapPage = () => {
   const [showDirections, setShowDirections] = useState(!!destinationId);
   const [activeDirection, setActiveDirection] = useState(0);
   
-  // In a real app, we would use a mapping library like mapbox-gl or leaflet
-  // For this demo, we'll simulate with static content
   const destination = destinationId ? zooLocations[destinationId as keyof typeof zooLocations] : null;
 
   useEffect(() => {
@@ -47,12 +43,9 @@ const MapPage = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
       <PageHeader title="" showBackButton showSettings />
       
-      {/* Map Area - In a real app, this would be a map component */}
       <div className="h-screen w-full bg-gray-200 relative">
-        {/* Static map placeholder */}
         <div className="absolute inset-0 bg-gray-200">
           <img
             src="public/lovable-uploads/f74294e2-bf7f-442d-ab97-78c98dcc394d.png"
@@ -61,7 +54,6 @@ const MapPage = () => {
           />
         </div>
         
-        {/* Search overlay */}
         <div className="absolute top-16 left-0 right-0 px-4">
           <SearchBar 
             placeholder="Where are you going to?"
@@ -70,7 +62,6 @@ const MapPage = () => {
           />
         </div>
         
-        {/* Navigation controls */}
         <div className="absolute bottom-32 right-4 flex flex-col gap-2">
           <button className="w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center">
             <Compass className="w-5 h-5 text-zoo-primary" />
@@ -80,7 +71,6 @@ const MapPage = () => {
           </button>
         </div>
         
-        {/* Current location marker - In a real app, this would be dynamic */}
         <div className="absolute bottom-1/3 left-1/4">
           <div className="relative">
             <div className="w-10 h-10 bg-zoo-primary rounded-full flex items-center justify-center shadow-lg">
@@ -90,7 +80,6 @@ const MapPage = () => {
           </div>
         </div>
         
-        {/* Destination marker - In a real app, this would be dynamic */}
         {destination && (
           <div className="absolute top-1/3 right-1/3">
             <div className="w-10 h-10 bg-white border-2 border-zoo-primary rounded-full flex items-center justify-center shadow-lg">
@@ -99,7 +88,6 @@ const MapPage = () => {
           </div>
         )}
         
-        {/* Directions panel */}
         {showDirections && destination && (
           <div className="absolute bottom-20 left-0 right-0 p-4">
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -143,7 +131,6 @@ const MapPage = () => {
         )}
       </div>
 
-      {/* Bottom Navigation */}
       <BottomNavbar />
     </div>
   );
