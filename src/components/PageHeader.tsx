@@ -1,6 +1,7 @@
 
-import { ChevronLeft, Moon, Sun, Settings } from "lucide-react";
+import { ChevronLeft, Settings } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface PageHeaderProps {
   title?: string;
@@ -26,14 +27,14 @@ const PageHeader = ({
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between ${
-        transparent ? "bg-transparent" : "bg-white border-b border-gray-100"
+        transparent ? "bg-transparent" : "bg-background border-b border-border"
       }`}
     >
       <div className="flex items-center">
         {showBackButton && (
           <button
             onClick={goBack}
-            className="w-10 h-10 flex items-center justify-center rounded-full text-gray-700 hover:bg-gray-100"
+            className="w-10 h-10 flex items-center justify-center rounded-full text-foreground hover:bg-secondary"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
@@ -41,20 +42,16 @@ const PageHeader = ({
       </div>
 
       {title && (
-        <h1 className="flex-1 text-center text-lg font-semibold">{title}</h1>
+        <h1 className="flex-1 text-center text-lg font-semibold text-foreground">{title}</h1>
       )}
 
       <div className="flex items-center gap-2">
-        {showThemeToggle && (
-          <button className="w-10 h-10 flex items-center justify-center rounded-full text-gray-700 hover:bg-gray-100">
-            <Moon className="w-5 h-5" />
-          </button>
-        )}
+        {showThemeToggle && <ThemeToggle />}
         
         {showSettings && (
           <Link
             to="/settings"
-            className="w-10 h-10 flex items-center justify-center rounded-full text-gray-700 hover:bg-gray-100"
+            className="w-10 h-10 flex items-center justify-center rounded-full text-foreground hover:bg-secondary"
           >
             <Settings className="w-5 h-5" />
           </Link>

@@ -7,6 +7,7 @@ import SearchBar from "../components/SearchBar";
 import BottomNavbar from "../components/BottomNavbar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Sample data for animals
 const popularAnimals = [
@@ -73,18 +74,21 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen pb-20 bg-white">
+    <div className="min-h-screen pb-20 bg-background">
       {/* Header */}
       <header className="px-5 pt-12 pb-4 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold flex items-center">
+          <h1 className="text-2xl font-bold flex items-center text-foreground">
             {greeting}, {name} <span className="ml-1 text-2xl">👋</span>
           </h1>
-          <p className="text-gray-500">Explore the Zoo</p>
+          <p className="text-muted-foreground">Explore the Zoo</p>
         </div>
-        <Link to="/settings">
-          <Settings className="w-6 h-6 text-gray-700" />
-        </Link>
+        <div className="flex gap-2">
+          <ThemeToggle />
+          <Link to="/settings">
+            <Settings className="w-6 h-6 text-foreground" />
+          </Link>
+        </div>
       </header>
 
       {/* Search */}
@@ -100,39 +104,39 @@ const HomePage = () => {
 
       {/* Quick Access */}
       <div className="px-5 mb-6">
-        <h2 className="text-lg font-semibold mb-3">Quick Access</h2>
+        <h2 className="text-lg font-semibold mb-3 text-foreground">Quick Access</h2>
         <div className="grid grid-cols-4 gap-3">
           <Link to="/map" className="flex flex-col items-center">
             <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
               <MapIcon className="w-7 h-7 text-zoo-primary" />
             </div>
-            <span className="text-xs text-center">Map</span>
+            <span className="text-xs text-center text-foreground">Map</span>
           </Link>
           <Link to="/events" className="flex flex-col items-center">
             <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
               <Calendar className="w-7 h-7 text-zoo-primary" />
             </div>
-            <span className="text-xs text-center">Events</span>
+            <span className="text-xs text-center text-foreground">Events</span>
           </Link>
           <Link to="/ar" className="flex flex-col items-center">
             <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
               <Camera className="w-7 h-7 text-zoo-primary" />
             </div>
-            <span className="text-xs text-center">AR View</span>
+            <span className="text-xs text-center text-foreground">AR View</span>
           </Link>
           {isAdmin ? (
             <Link to="/admin" className="flex flex-col items-center">
               <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
                 <Users className="w-7 h-7 text-zoo-primary" />
               </div>
-              <span className="text-xs text-center">Admin</span>
+              <span className="text-xs text-center text-foreground">Admin</span>
             </Link>
           ) : (
             <Link to="/visit-list" className="flex flex-col items-center">
               <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
                 <Bookmark className="w-7 h-7 text-zoo-primary" />
               </div>
-              <span className="text-xs text-center">Visit List</span>
+              <span className="text-xs text-center text-foreground">Visit List</span>
             </Link>
           )}
         </div>
@@ -141,7 +145,7 @@ const HomePage = () => {
       {/* Popular places */}
       <div className="px-5 mb-6">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-semibold">Popular animals</h2>
+          <h2 className="text-lg font-semibold text-foreground">Popular animals</h2>
           <Link to="/search" className="text-sm text-zoo-primary">
             View all
           </Link>
@@ -162,22 +166,22 @@ const HomePage = () => {
       {/* Today's Events */}
       <div className="px-5 mb-6">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-semibold">Today's Events</h2>
+          <h2 className="text-lg font-semibold text-foreground">Today's Events</h2>
           <Link to="/events" className="text-sm text-zoo-primary">
             All events
           </Link>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
           {todayEvents.map((event, idx) => (
             <div 
               key={event.id} 
               className={`p-3 flex justify-between items-center ${
-                idx < todayEvents.length - 1 ? "border-b border-gray-100" : ""
+                idx < todayEvents.length - 1 ? "border-b border-border" : ""
               }`}
             >
               <div>
-                <h3 className="font-medium">{event.title}</h3>
-                <p className="text-sm text-gray-500">{event.time} • {event.location}</p>
+                <h3 className="font-medium text-foreground">{event.title}</h3>
+                <p className="text-sm text-muted-foreground">{event.time} • {event.location}</p>
               </div>
               <Button variant="outline" size="sm" asChild>
                 <Link to="/events">Details</Link>
