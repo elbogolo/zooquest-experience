@@ -18,6 +18,7 @@ import AuthPage from "./pages/AuthPage";
 import SplashPage from "./pages/SplashPage";
 import NotFound from "./pages/NotFound";
 import EventsPage from "./pages/EventsPage";
+import EventDetailPage from "./pages/EventDetailPage";
 import AdminPage from "./pages/AdminPage";
 import ARPage from "./pages/ARPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/profile/edit" element={<EditProfilePage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/events" element={<EventsPage />} />
+            <Route path="/events/:id" element={<EventDetailPage />} />
             <Route path="/ar" element={<ARPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/auth" element={<AuthPage />} />

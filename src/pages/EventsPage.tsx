@@ -1,12 +1,11 @@
-
 import { useState } from "react";
 import { Calendar, Clock, MapPin, ChevronRight, Bell, Filter } from "lucide-react";
 import PageHeader from "../components/PageHeader";
 import BottomNavbar from "../components/BottomNavbar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
-// Sample event data
 const events = [
   {
     id: "lion-feeding",
@@ -94,17 +93,13 @@ const EventsPage = () => {
   };
 
   const navigateToEvent = (eventId: string) => {
-    // In a real app, this would navigate to the event detail page
-    // or show the event location on the map
     toast.info(`Navigating to event location on map`);
   };
 
-  // Filter events based on the active filter
   const filteredEvents = eventsList.filter(event => {
     if (activeFilter === "All Events") return true;
     if (activeFilter === "Today") return event.date === "Today";
     if (activeFilter === "Tomorrow") return event.date === "Tomorrow";
-    // Additional filters would be implemented here
     return true;
   });
 
@@ -176,12 +171,12 @@ const EventsPage = () => {
                       <MapPin className="w-3 h-3 mr-1" />
                       <span>{event.location}</span>
                     </div>
-                    <button
-                      onClick={() => navigateToEvent(event.id)}
+                    <Link
+                      to={`/events/${event.id}`}
                       className="text-zoo-primary flex items-center text-xs"
                     >
-                      View on map <ChevronRight className="w-3 h-3 ml-1" />
-                    </button>
+                      View details <ChevronRight className="w-3 h-3 ml-1" />
+                    </Link>
                   </div>
                 </div>
               </div>
