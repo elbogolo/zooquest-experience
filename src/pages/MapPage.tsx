@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import { Navigation, MapPin, Compass, X, RotateCcw, Search, AlertCircle, Route } from "lucide-react";
