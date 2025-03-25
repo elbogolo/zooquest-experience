@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { 
   ChevronLeft, 
   Heart, 
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import PageHeader from "../components/PageHeader";
 import BottomNavbar from "../components/BottomNavbar";
+import { toast } from "sonner";
 
 // Sample detailed animal data
 const animalData = {
@@ -65,8 +67,17 @@ const animalData = {
 
 const AnimalDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(() => {
+    // Load favorites from localStorage
+    const storedFavorites = localStorage.getItem('zooFavorites');
+    if (storedFavorites) {
+      const favorites = JSON.parse(storedFavorites);
+      return favorites.includes(id);
+    }
+    return false;
+  });
   
   // In a real app, we would fetch this data from an API
   const animal = animalData[id as keyof typeof animalData];
@@ -76,7 +87,28 @@ const AnimalDetail = () => {
   }
 
   const toggleFavorite = () => {
-    setIsFavorite(!isFavorite);
+    const newValue = !isFavorite;
+    setIsFavorite(newValue);
+    
+    // Update localStorage
+    const storedFavorites = localStorage.getItem('zooFavorites');
+    let favorites = storedFavorites ? JSON.parse(storedFavorites) : [];
+    
+    if (newValue) {
+      if (!favorites.includes(id)) {
+        favorites.push(id);
+      }
+      toast.success(`${animal.name} added to your favorites`);
+    } else {
+      favorites = favorites.filter((favId: string) => favId !== id);
+      toast.info(`${animal.name} removed from your favorites`);
+    }
+    
+    localStorage.setItem('zooFavorites', JSON.stringify(favorites));
+  };
+
+  const navigateToMap = () => {
+    navigate(`/map?destination=${animal.id}`);
   };
 
   return (
@@ -89,7 +121,7 @@ const AnimalDetail = () => {
           className="w-full h-full object-cover"
         />
         <div className="absolute top-0 left-0 right-0 p-4">
-          <PageHeader transparent showBackButton />
+          <PageHeader transparent showBackButton showThemeToggle showUserAvatar />
         </div>
         <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/80 to-transparent">
           <h1 className="text-3xl font-bold text-white">{animal.name}</h1>
@@ -166,7 +198,12 @@ const AnimalDetail = () => {
               className="p-3 bg-gray-50 rounded-lg border border-gray-100 flex justify-between items-center"
             >
               <span>{event}</span>
-              <button className="text-zoo-primary text-sm font-medium">Add to Schedule</button>
+              <button 
+                onClick={() => toast.success(`Added "${event}" to your schedule`)}
+                className="text-zoo-primary text-sm font-medium"
+              >
+                Add to Schedule
+              </button>
             </div>
           ))}
         </div>
@@ -179,13 +216,13 @@ const AnimalDetail = () => {
           className="flex-1 zoo-button-outline flex items-center justify-center gap-2"
         >
           <Bookmark className={isFavorite ? "fill-zoo-primary" : ""} size={18} />
-          <span>Add to List</span>
+          <span>{isFavorite ? 'Saved' : 'Add to List'}</span>
         </button>
         
-        <Link to={`/map?destination=${animal.id}`} className="flex-1 zoo-button flex items-center justify-center gap-2">
+        <button onClick={navigateToMap} className="flex-1 zoo-button flex items-center justify-center gap-2">
           <Navigation size={18} />
           <span>Visit Now</span>
-        </Link>
+        </button>
       </div>
 
       {/* Bottom Navigation */}

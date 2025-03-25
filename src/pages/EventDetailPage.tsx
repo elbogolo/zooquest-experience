@@ -30,11 +30,21 @@ const EventDetailPage = () => {
   }, [id, navigate, getEventById, events]);
 
   const handleShare = () => {
-    toast.info("Sharing functionality would open native share dialog");
+    if (navigator.share) {
+      navigator.share({
+        title: event.title,
+        text: `Check out this event: ${event.title}`,
+        url: window.location.href,
+      }).catch(() => {
+        toast.info("Sharing functionality would open native share dialog");
+      });
+    } else {
+      toast.info("Sharing functionality would open native share dialog");
+    }
   };
 
   const navigateToMap = () => {
-    toast.info("Navigating to event location on map");
+    // Pass the event location as state to the map page
     navigate("/map", { state: { eventLocation: event?.location } });
   };
 
