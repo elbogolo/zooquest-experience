@@ -24,6 +24,24 @@ const SettingsPage = () => {
     window.location.href = "/auth";
   };
 
+  const handleToggleNotifications = (checked: boolean) => {
+    setNotifications(checked);
+    localStorage.setItem("notificationsEnabled", checked.toString());
+    toast.success(`Notifications ${checked ? 'enabled' : 'disabled'}`);
+  };
+
+  const handleToggleLocation = (checked: boolean) => {
+    setLocation(checked);
+    localStorage.setItem("locationEnabled", checked.toString());
+    toast.success(`Location services ${checked ? 'enabled' : 'disabled'}`);
+  };
+
+  const handleToggleTheme = (checked: boolean) => {
+    const newTheme = checked ? "dark" : "light";
+    setTheme(newTheme);
+    toast.success(`${newTheme.charAt(0).toUpperCase() + newTheme.slice(1)} mode activated`);
+  };
+
   const menuSections = [
     {
       title: "App Settings",
@@ -34,7 +52,7 @@ const SettingsPage = () => {
           action: (
             <Switch 
               checked={notifications} 
-              onCheckedChange={setNotifications} 
+              onCheckedChange={handleToggleNotifications}
             />
           )
         },
@@ -44,7 +62,7 @@ const SettingsPage = () => {
           action: (
             <Switch 
               checked={location} 
-              onCheckedChange={setLocation} 
+              onCheckedChange={handleToggleLocation}
             />
           )
         },
@@ -54,7 +72,7 @@ const SettingsPage = () => {
           action: (
             <Switch 
               checked={theme === "dark"} 
-              onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")} 
+              onCheckedChange={handleToggleTheme}
             />
           )
         },
@@ -73,6 +91,18 @@ const SettingsPage = () => {
           icon: <ShieldCheck className="w-5 h-5" />, 
           label: "Security", 
           path: "/profile/security",
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />
+        },
+        { 
+          icon: <Bell className="w-5 h-5" />, 
+          label: "Notifications", 
+          path: "/profile/notifications",
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />
+        },
+        { 
+          icon: <Lock className="w-5 h-5" />, 
+          label: "Privacy", 
+          path: "/profile/privacy",
           action: <ChevronRight className="w-5 h-5 text-muted-foreground" />
         },
       ],
