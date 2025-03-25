@@ -1,15 +1,12 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { MapPin, Clock, Calendar, Bell, Share2, ArrowLeft } from "lucide-react";
+import { MapPin, Clock, Calendar, Bell, Share2 } from "lucide-react";
 import PageHeader from "../components/PageHeader";
 import BottomNavbar from "../components/BottomNavbar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-// This would come from an API in a real app
 const getEventById = (id: string) => {
-  // Sample data matching the events on the home page and events page
   const events = [
     {
       id: "event1",
@@ -113,10 +110,9 @@ const EventDetailPage = () => {
 
   return (
     <div className="min-h-screen pb-20 bg-background">
-      <PageHeader title="Event Details" showBackButton />
+      <PageHeader title="Event Details" showBackButton showThemeToggle showUserAvatar />
       
       <div className="pt-16">
-        {/* Event Image */}
         <div className="w-full h-48 relative">
           <img
             src={event.image}
@@ -129,7 +125,6 @@ const EventDetailPage = () => {
           </div>
         </div>
         
-        {/* Event Details */}
         <div className="p-5 space-y-6">
           <div className="flex justify-between">
             <div className="flex-1 space-y-3">

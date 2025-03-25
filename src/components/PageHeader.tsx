@@ -2,12 +2,14 @@
 import { ChevronLeft, Settings } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
+import UserAvatar from "./UserAvatar";
 
 interface PageHeaderProps {
   title?: string;
   showBackButton?: boolean;
   showSettings?: boolean;
   showThemeToggle?: boolean;
+  showUserAvatar?: boolean;
   transparent?: boolean;
 }
 
@@ -16,6 +18,7 @@ const PageHeader = ({
   showBackButton = false,
   showSettings = false,
   showThemeToggle = false,
+  showUserAvatar = false,
   transparent = false,
 }: PageHeaderProps) => {
   const navigate = useNavigate();
@@ -54,6 +57,12 @@ const PageHeader = ({
             className="w-10 h-10 flex items-center justify-center rounded-full text-foreground hover:bg-secondary"
           >
             <Settings className="w-5 h-5" />
+          </Link>
+        )}
+
+        {showUserAvatar && (
+          <Link to="/profile">
+            <UserAvatar size="sm" />
           </Link>
         )}
       </div>

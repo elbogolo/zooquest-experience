@@ -1,5 +1,6 @@
+
 import { Heart } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 interface AnimalCardProps {
@@ -26,6 +27,11 @@ const AnimalCard = ({
   onToggleFavorite,
 }: AnimalCardProps) => {
   const [favorite, setFavorite] = useState(isFavorite);
+
+  // Update local state when isFavorite prop changes
+  useEffect(() => {
+    setFavorite(isFavorite);
+  }, [isFavorite]);
 
   const toggleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();

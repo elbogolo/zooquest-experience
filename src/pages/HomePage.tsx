@@ -38,6 +38,29 @@ const popularAnimals = [
   },
 ];
 
+// All animals for search
+const allAnimals = [
+  ...popularAnimals,
+  {
+    id: "tortoise",
+    name: "Tortoise",
+    image: "public/lovable-uploads/009a33ba-77b2-49a3-86ae-0586197bf4ab.png",
+    isFavorite: false,
+  },
+  {
+    id: "peacock",
+    name: "Peacock",
+    image: "public/lovable-uploads/d65de9b2-e507-4511-a47c-4962de992a26.png",
+    isFavorite: false,
+  },
+  {
+    id: "zebra",
+    name: "Zebra",
+    image: "public/lovable-uploads/c0779203-cebe-4f61-be65-f8939ee46040.png",
+    isFavorite: false,
+  },
+];
+
 // Sample events for today
 const todayEvents = [
   { id: "event1", title: "Lion Feeding", time: "10:00 AM", location: "Lion Enclosure" },
@@ -51,6 +74,9 @@ const HomePage = () => {
   const [name, setName] = useState("Guest");
   const [search, setSearch] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [searchResults, setSearchResults] = useState<typeof allAnimals>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
 
   // Set greeting based on time of day
   useEffect(() => {
@@ -66,14 +92,42 @@ const HomePage = () => {
     // Check if user is admin (for demo purposes)
     const adminStatus = localStorage.getItem("isAdmin");
     setIsAdmin(adminStatus === "true");
+    
+    // Initialize favorites from localStorage or from the popularAnimals array
+    const storedFavorites = localStorage.getItem("favorites");
+    if (storedFavorites) {
+      setFavorites(JSON.parse(storedFavorites));
+    } else {
+      const initialFavorites: Record<string, boolean> = {};
+      popularAnimals.forEach(animal => {
+        if (animal.isFavorite) {
+          initialFavorites[animal.id] = true;
+        }
+      });
+      setFavorites(initialFavorites);
+    }
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (search.trim()) {
-      toast.info(`Searching for "${search}"`);
-      navigate(`/search?q=${encodeURIComponent(search)}`);
+  // Save favorites to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("favorites", JSON.stringify(favorites));
+  }, [favorites]);
+
+  const handleSearch = (searchTerm: string) => {
+    if (searchTerm.trim()) {
+      const results = allAnimals.filter(animal => 
+        animal.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setSearchResults(results);
+      setIsSearching(true);
+      toast.info(`Found ${results.length} results for "${searchTerm}"`);
     }
+  };
+
+  const clearSearch = () => {
+    setSearch("");
+    setIsSearching(false);
+    setSearchResults([]);
   };
 
   const handleAnimalCardClick = (id: string) => {
@@ -81,12 +135,17 @@ const HomePage = () => {
   };
 
   const handleToggleFavorite = (id: string, isFavorite: boolean) => {
-    // In a real app, we would update the database
-    toast.success(`${isFavorite ? 'Added to' : 'Removed from'} favorites`);
+    // Update favorites state
+    setFavorites(prev => ({
+      ...prev,
+      [id]: isFavorite
+    }));
     
-    // Update the local state (in a real app this would be from a context or state manager)
-    popularAnimals.find(animal => animal.id === id)!.isFavorite = isFavorite;
+    toast.success(`${isFavorite ? 'Added to' : 'Removed from'} favorites`);
   };
+
+  // Determine which animals to display
+  const displayAnimals = isSearching ? searchResults : popularAnimals;
 
   return (
     <div className="min-h-screen pb-20 bg-background">
@@ -103,111 +162,139 @@ const HomePage = () => {
           <Link to="/settings" className="flex items-center justify-center">
             <Settings className="w-6 h-6 text-foreground" />
           </Link>
-          <UserAvatar size="sm" />
+          <Link to="/profile">
+            <UserAvatar size="sm" />
+          </Link>
         </div>
       </header>
 
       {/* Search */}
       <div className="px-5 mb-6">
-        <form onSubmit={handleSearch}>
-          <SearchBar 
-            placeholder="Search animals, events, or places" 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </form>
+        <SearchBar 
+          placeholder="Search animals, events, or places" 
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onSubmit={handleSearch}
+        />
       </div>
 
-      {/* Quick Access */}
-      <div className="px-5 mb-6">
-        <h2 className="text-lg font-semibold mb-3 text-foreground">Quick Access</h2>
-        <div className="grid grid-cols-4 gap-3">
-          <Link to="/map" className="flex flex-col items-center">
-            <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
-              <MapIcon className="w-7 h-7 text-zoo-primary" />
-            </div>
-            <span className="text-xs text-center text-foreground">Map</span>
-          </Link>
-          <Link to="/events" className="flex flex-col items-center">
-            <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
-              <Calendar className="w-7 h-7 text-zoo-primary" />
-            </div>
-            <span className="text-xs text-center text-foreground">Events</span>
-          </Link>
-          <Link to="/ar" className="flex flex-col items-center">
-            <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
-              <Camera className="w-7 h-7 text-zoo-primary" />
-            </div>
-            <span className="text-xs text-center text-foreground">AR View</span>
-          </Link>
-          {isAdmin ? (
-            <Link to="/admin" className="flex flex-col items-center">
+      {/* Show clear search button when searching */}
+      {isSearching && (
+        <div className="px-5 mb-4 flex justify-between items-center">
+          <h2 className="text-lg font-semibold text-foreground">
+            Search Results ({searchResults.length})
+          </h2>
+          <Button variant="outline" size="sm" onClick={clearSearch}>
+            Clear Search
+          </Button>
+        </div>
+      )}
+
+      {/* Quick Access - only show if not searching */}
+      {!isSearching && (
+        <div className="px-5 mb-6">
+          <h2 className="text-lg font-semibold mb-3 text-foreground">Quick Access</h2>
+          <div className="grid grid-cols-4 gap-3">
+            <Link to="/map" className="flex flex-col items-center">
               <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
-                <Users className="w-7 h-7 text-zoo-primary" />
+                <MapIcon className="w-7 h-7 text-zoo-primary" />
               </div>
-              <span className="text-xs text-center text-foreground">Admin</span>
+              <span className="text-xs text-center text-foreground">Map</span>
             </Link>
-          ) : (
-            <Link to="/visit-list" className="flex flex-col items-center">
+            <Link to="/events" className="flex flex-col items-center">
               <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
-                <Bookmark className="w-7 h-7 text-zoo-primary" />
+                <Calendar className="w-7 h-7 text-zoo-primary" />
               </div>
-              <span className="text-xs text-center text-foreground">Visit List</span>
+              <span className="text-xs text-center text-foreground">Events</span>
+            </Link>
+            <Link to="/ar" className="flex flex-col items-center">
+              <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
+                <Camera className="w-7 h-7 text-zoo-primary" />
+              </div>
+              <span className="text-xs text-center text-foreground">AR View</span>
+            </Link>
+            {isAdmin ? (
+              <Link to="/admin" className="flex flex-col items-center">
+                <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
+                  <Users className="w-7 h-7 text-zoo-primary" />
+                </div>
+                <span className="text-xs text-center text-foreground">Admin</span>
+              </Link>
+            ) : (
+              <Link to="/visit-list" className="flex flex-col items-center">
+                <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
+                  <Bookmark className="w-7 h-7 text-zoo-primary" />
+                </div>
+                <span className="text-xs text-center text-foreground">Visit List</span>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Animals Section */}
+      <div className="px-5 mb-6">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-lg font-semibold text-foreground">
+            {isSearching ? "Search Results" : "Popular animals"}
+          </h2>
+          {!isSearching && (
+            <Link to="/search" className="text-sm text-zoo-primary">
+              View all
             </Link>
           )}
         </div>
-      </div>
-
-      {/* Popular animals */}
-      <div className="px-5 mb-6">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-semibold text-foreground">Popular animals</h2>
-          <Link to="/search" className="text-sm text-zoo-primary">
-            View all
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          {popularAnimals.map((animal) => (
-            <AnimalCard
-              key={animal.id}
-              id={animal.id}
-              name={animal.name}
-              image={animal.image}
-              isFavorite={animal.isFavorite}
-              onClick={() => handleAnimalCardClick(animal.id)}
-              onToggleFavorite={(isFavorite) => handleToggleFavorite(animal.id, isFavorite)}
-            />
-          ))}
-        </div>
+        
+        {displayAnimals.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4">
+            {displayAnimals.map((animal) => (
+              <AnimalCard
+                key={animal.id}
+                id={animal.id}
+                name={animal.name}
+                image={animal.image}
+                isFavorite={!!favorites[animal.id]}
+                onClick={() => handleAnimalCardClick(animal.id)}
+                onToggleFavorite={(isFavorite) => handleToggleFavorite(animal.id, isFavorite)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-card rounded-xl border border-border">
+            <p className="text-muted-foreground">No animals found</p>
+          </div>
+        )}
       </div>
       
-      {/* Today's Events */}
-      <div className="px-5 mb-6">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-semibold text-foreground">Today's Events</h2>
-          <Link to="/events" className="text-sm text-zoo-primary">
-            All events
-          </Link>
-        </div>
-        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-          {todayEvents.map((event, idx) => (
-            <div 
-              key={event.id} 
-              className={`p-3 flex justify-between items-center ${
-                idx < todayEvents.length - 1 ? "border-b border-border" : ""
-              }`}
-            >
-              <div>
-                <h3 className="font-medium text-foreground">{event.title}</h3>
-                <p className="text-sm text-muted-foreground">{event.time} • {event.location}</p>
+      {/* Today's Events - only show if not searching */}
+      {!isSearching && (
+        <div className="px-5 mb-6">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-semibold text-foreground">Today's Events</h2>
+            <Link to="/events" className="text-sm text-zoo-primary">
+              All events
+            </Link>
+          </div>
+          <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+            {todayEvents.map((event, idx) => (
+              <div 
+                key={event.id} 
+                className={`p-3 flex justify-between items-center ${
+                  idx < todayEvents.length - 1 ? "border-b border-border" : ""
+                }`}
+              >
+                <div>
+                  <h3 className="font-medium text-foreground">{event.title}</h3>
+                  <p className="text-sm text-muted-foreground">{event.time} • {event.location}</p>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/events/${event.id}`}>Details</Link>
+                </Button>
               </div>
-              <Button variant="outline" size="sm" asChild>
-                <Link to={`/events/${event.id}`}>Details</Link>
-              </Button>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       
       {/* Bottom Navigation */}
       <BottomNavbar />

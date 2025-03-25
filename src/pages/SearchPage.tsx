@@ -1,9 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import SearchBar from "../components/SearchBar";
 import AnimalCard from "../components/AnimalCard";
 import BottomNavbar from "../components/BottomNavbar";
+import { toast } from "sonner";
 
 // Sample animal data for search results
 const allAnimals = [
@@ -45,23 +47,57 @@ const allAnimals = [
 ];
 
 const SearchPage = () => {
+  const location = useLocation();
   const [search, setSearch] = useState("");
+  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
+  
+  // Get initial search term from URL if available
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const query = searchParams.get('q');
+    if (query) {
+      setSearch(query);
+    }
+    
+    // Load favorites from localStorage
+    const storedFavorites = localStorage.getItem("favorites");
+    if (storedFavorites) {
+      setFavorites(JSON.parse(storedFavorites));
+    }
+  }, [location.search]);
   
   // Filter animals based on search term
   const filteredAnimals = allAnimals.filter(animal => 
     animal.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleSearch = (searchTerm: string) => {
+    setSearch(searchTerm);
+  };
+
+  const handleToggleFavorite = (id: string, isFavorite: boolean) => {
+    // Update favorites state
+    const newFavorites = { ...favorites, [id]: isFavorite };
+    setFavorites(newFavorites);
+    
+    // Store in localStorage
+    localStorage.setItem("favorites", JSON.stringify(newFavorites));
+    
+    toast.success(`${isFavorite ? 'Added to' : 'Removed from'} favorites`);
+  };
+
   return (
-    <div className="min-h-screen pb-20 bg-white">
-      <PageHeader showBackButton showSettings />
+    <div className="min-h-screen pb-20 bg-background">
+      <PageHeader showBackButton showSettings showUserAvatar />
       
       <div className="pt-16 px-5">
         <SearchBar 
-          placeholder="Search enclosures" 
+          placeholder="Search animals, events, or places" 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onSubmit={handleSearch}
           className="mb-6"
+          autoFocus={true}
         />
         
         <div className="space-y-4">
@@ -72,6 +108,8 @@ const SearchPage = () => {
                 name={animal.name}
                 image={animal.image}
                 compact
+                isFavorite={!!favorites[animal.id]}
+                onToggleFavorite={(isFavorite) => handleToggleFavorite(animal.id, isFavorite)}
               />
             </div>
           ))}
