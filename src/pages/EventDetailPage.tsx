@@ -1,85 +1,33 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { MapPin, Clock, Calendar, Bell, Share2 } from "lucide-react";
+import { MapPin, Clock, Calendar, Share2 } from "lucide-react";
 import PageHeader from "../components/PageHeader";
 import BottomNavbar from "../components/BottomNavbar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-
-const getEventById = (id: string) => {
-  const events = [
-    {
-      id: "event1",
-      title: "Lion Feeding",
-      time: "10:00 AM",
-      location: "Lion Enclosure",
-      date: "Today",
-      description: "Watch our lions during their feeding time. Learn about their diet and behavior from our expert zookeepers.",
-      image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
-      notificationEnabled: false,
-      duration: "30 minutes",
-      host: "Senior Zookeeper Davis"
-    },
-    {
-      id: "event2",
-      title: "Tiger Talk",
-      time: "11:30 AM",
-      location: "Tiger Territory",
-      date: "Today",
-      description: "Join our conservation experts for an educational talk about tigers and our conservation efforts.",
-      image: "public/lovable-uploads/385ec9d1-9804-48f9-95d9-e88ad31bedb7.png",
-      notificationEnabled: false,
-      duration: "45 minutes",
-      host: "Dr. Emily Chen, Conservation Specialist"
-    },
-    {
-      id: "event3",
-      title: "Gorilla Encounter",
-      time: "2:00 PM",
-      location: "Gorilla Habitat",
-      date: "Today",
-      description: "Get up close with our gorilla family and learn about these intelligent primates from our primate specialists.",
-      image: "public/lovable-uploads/4fe1f1a1-c3d6-477b-b486-5590bda76085.png",
-      notificationEnabled: false,
-      duration: "40 minutes",
-      host: "Primate Specialist Johnson"
-    }
-  ];
-  
-  return events.find(event => event.id === id);
-};
+import { useEvents } from "@/contexts/EventsContext";
+import NotificationIcon from "@/components/NotificationIcon";
 
 const EventDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [event, setEvent] = useState<any>(null);
+  const { events, getEventById, toggleNotification } = useEvents();
   const [loading, setLoading] = useState(true);
-  const [notificationEnabled, setNotificationEnabled] = useState(false);
+  const [event, setEvent] = useState<any>(null);
 
   useEffect(() => {
     if (id) {
       const eventData = getEventById(id);
       if (eventData) {
         setEvent(eventData);
-        setNotificationEnabled(eventData.notificationEnabled);
       } else {
         toast.error("Event not found");
         navigate("/events");
       }
       setLoading(false);
     }
-  }, [id, navigate]);
-
-  const toggleNotification = () => {
-    const newStatus = !notificationEnabled;
-    setNotificationEnabled(newStatus);
-    
-    if (newStatus) {
-      toast.success(`You'll be notified before ${event?.title}`);
-    } else {
-      toast.info(`Notification for ${event?.title} turned off`);
-    }
-  };
+  }, [id, navigate, getEventById, events]);
 
   const handleShare = () => {
     toast.info("Sharing functionality would open native share dialog");
@@ -143,15 +91,13 @@ const EventDetailPage = () => {
             </div>
             
             <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className={notificationEnabled ? "text-zoo-primary border-zoo-primary" : ""}
-                onClick={toggleNotification}
-              >
-                <Bell className="w-5 h-5" />
-              </Button>
-              <Button variant="outline" size="icon" onClick={handleShare}>
+              <NotificationIcon 
+                enabled={event.notificationEnabled} 
+                onToggle={() => toggleNotification(event.id)}
+                className="h-10 w-10"
+                size="lg"
+              />
+              <Button variant="outline" size="icon" onClick={handleShare} className="h-10 w-10">
                 <Share2 className="w-5 h-5" />
               </Button>
             </div>

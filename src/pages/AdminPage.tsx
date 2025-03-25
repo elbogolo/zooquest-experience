@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import PageHeader from "../components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEvents, Event } from "@/contexts/EventsContext";
+import { Link, useNavigate } from "react-router-dom";
 
 // Sample data for demonstration
 const animalsList = [
@@ -26,12 +28,6 @@ const animalsList = [
   { id: "crocodile", name: "Crocodile", location: "Reptile House", status: "Healthy" }
 ];
 
-const eventsList = [
-  { id: "event1", title: "Lion Feeding", time: "10:00 AM", date: "2023-07-15" },
-  { id: "event2", title: "Tiger Talk", time: "11:30 AM", date: "2023-07-15" },
-  { id: "event3", title: "Gorilla Encounter", time: "2:00 PM", date: "2023-07-15" }
-];
-
 const notificationsList = [
   { id: "notif1", title: "Zoo closing early", status: "Sent", recipients: "All visitors", date: "2023-07-14" },
   { id: "notif2", title: "Tiger exhibit closed", status: "Scheduled", recipients: "Today's visitors", date: "2023-07-15" }
@@ -39,18 +35,77 @@ const notificationsList = [
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("animals");
+  const { events, addEvent, updateEvent, deleteEvent } = useEvents();
+  const navigate = useNavigate();
+  
+  const [newEventData, setNewEventData] = useState({
+    title: "",
+    date: "Today",
+    time: "10:00 AM",
+    location: "Main Zoo Area",
+    description: "",
+    image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png", // Default image
+    duration: "30 minutes",
+    host: "Zoo Staff"
+  });
 
   const handleAddItem = () => {
-    toast.info(`Adding new ${activeTab.slice(0, -1)}`);
+    if (activeTab === "events") {
+      // Show mock form with success toast
+      toast.info("Opening event creation form");
+      setTimeout(() => {
+        if (newEventData.title) {
+          addEvent(newEventData as Omit<Event, "id">);
+          setNewEventData({
+            title: "",
+            date: "Today",
+            time: "10:00 AM",
+            location: "Main Zoo Area",
+            description: "",
+            image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
+            duration: "30 minutes",
+            host: "Zoo Staff"
+          });
+        } else {
+          toast.error("Event title is required to create a new event");
+        }
+      }, 1000);
+    } else {
+      toast.info(`Adding new ${activeTab.slice(0, -1)}`);
+    }
   };
 
   const handleEditItem = (id: string) => {
-    toast.info(`Editing item ${id}`);
+    if (activeTab === "events") {
+      const eventToEdit = events.find(e => e.id === id);
+      if (eventToEdit) {
+        // In a real app, this would open a form populated with event data
+        toast.info(`Editing event: ${eventToEdit.title}`);
+        setTimeout(() => {
+          // Mock update with a small change to demonstrate
+          updateEvent(id, { 
+            ...eventToEdit,
+            description: eventToEdit.description + " (Updated)"
+          });
+        }, 1000);
+      }
+    } else {
+      toast.info(`Editing item ${id}`);
+    }
   };
 
   const handleDeleteItem = (id: string) => {
-    toast.info(`Deleting item ${id}`);
-    toast.error("This action would require confirmation in a real app");
+    if (activeTab === "events") {
+      toast.info(`Preparing to delete event ${id}`);
+      
+      // In a real app, this would show a confirmation dialog
+      setTimeout(() => {
+        deleteEvent(id);
+      }, 1000);
+    } else {
+      toast.info(`Deleting item ${id}`);
+      toast.error("This action would require confirmation in a real app");
+    }
   };
 
   const handleSendNotification = () => {
@@ -59,6 +114,10 @@ const AdminPage = () => {
 
   const handleUploadImage = () => {
     toast.info("Image upload functionality would open here");
+  };
+
+  const handleViewEvent = (id: string) => {
+    navigate(`/events/${id}`);
   };
 
   return (
@@ -136,14 +195,70 @@ const AdminPage = () => {
           <TabsContent value="events" className="mt-0">
             <div className="bg-white rounded-xl shadow-sm p-4">
               <h2 className="text-lg font-semibold mb-3">Events Management</h2>
+              
+              {activeTab === "events" && (
+                <div className="mb-4 border rounded-lg p-3">
+                  <h3 className="text-md font-medium mb-2">Add New Event</h3>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Event Title"
+                      value={newEventData.title}
+                      onChange={(e) => setNewEventData({...newEventData, title: e.target.value})}
+                      className="w-full p-2 border rounded"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <select 
+                        value={newEventData.date}
+                        onChange={(e) => setNewEventData({...newEventData, date: e.target.value})}
+                        className="p-2 border rounded"
+                      >
+                        <option value="Today">Today</option>
+                        <option value="Tomorrow">Tomorrow</option>
+                        <option value="Next Week">Next Week</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Time"
+                        value={newEventData.time}
+                        onChange={(e) => setNewEventData({...newEventData, time: e.target.value})}
+                        className="p-2 border rounded"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Location"
+                      value={newEventData.location}
+                      onChange={(e) => setNewEventData({...newEventData, location: e.target.value})}
+                      className="w-full p-2 border rounded"
+                    />
+                    <textarea
+                      placeholder="Description"
+                      value={newEventData.description}
+                      onChange={(e) => setNewEventData({...newEventData, description: e.target.value})}
+                      className="w-full p-2 border rounded"
+                      rows={3}
+                    />
+                    <Button onClick={handleAddItem} className="w-full">Create Event</Button>
+                  </div>
+                </div>
+              )}
+              
               <div className="space-y-3">
-                {eventsList.map((event) => (
+                {events.map((event) => (
                   <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <h3 className="font-medium">{event.title}</h3>
                       <p className="text-sm text-gray-500">{event.time} on {event.date}</p>
+                      <p className="text-sm text-gray-500">Location: {event.location}</p>
                     </div>
                     <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleViewEvent(event.id)}
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-full"
+                      >
+                        <Calendar className="w-4 h-4" />
+                      </button>
                       <button 
                         onClick={() => handleEditItem(event.id)}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
