@@ -2,63 +2,26 @@ import { useState, useEffect } from "react";
 import { 
   Users, 
   Calendar, 
-  FileText, 
+  Bell, 
   Settings, 
   Plus, 
-  Edit, 
-  Trash2, 
-  Image, 
-  MessageSquare,
-  Bell,
-  Upload,
   Search,
   Filter,
-  AlertTriangle,
+  RefreshCw,
   Check,
   Info,
-  RefreshCw,
-  X
 } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "../components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useEvents, Event } from "@/contexts/EventsContext";
+import { useEvents } from "@/contexts/EventsContext";
 import { Link, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { Label } from "@/components/ui/label";
 import { adminService } from "@/services/adminService";
-
-const animalsList = [
-  { id: "lion", name: "Lion", location: "Lion Enclosure", status: "Healthy", lastCheckup: "2023-07-10" },
-  { id: "tiger", name: "Tiger", location: "Tiger Territory", status: "Under observation", lastCheckup: "2023-07-08" },
-  { id: "gorilla", name: "Gorilla", location: "Gorilla Habitat", status: "Healthy", lastCheckup: "2023-07-12" },
-  { id: "crocodile", name: "Crocodile", location: "Reptile House", status: "Healthy", lastCheckup: "2023-07-05" },
-  { id: "elephant", name: "Elephant", location: "Savanna Area", status: "Healthy", lastCheckup: "2023-07-09" },
-  { id: "giraffe", name: "Giraffe", location: "Giraffe Overlook", status: "Scheduled for checkup", lastCheckup: "2023-06-28" }
-];
-
-const notificationsList = [
-  { id: "notif1", title: "Zoo closing early", status: "Sent", recipients: "All visitors", date: "2023-07-14" },
-  { id: "notif2", title: "Tiger exhibit closed", status: "Scheduled", recipients: "Today's visitors", date: "2023-07-15" },
-  { id: "notif3", title: "New panda exhibit", status: "Draft", recipients: "All members", date: "2023-07-20" },
-  { id: "notif4", title: "Holiday hours", status: "Sent", recipients: "All visitors", date: "2023-07-11" }
-];
-
-const staffList = [
-  { id: "staff1", name: "John Smith", role: "Zookeeper", department: "Mammals", status: "Active" },
-  { id: "staff2", name: "Emily Johnson", role: "Veterinarian", department: "Medical", status: "Active" },
-  { id: "staff3", name: "Michael Brown", role: "Tour Guide", department: "Education", status: "On Leave" },
-  { id: "staff4", name: "Sarah Davis", role: "Administrative", department: "Office", status: "Active" },
-];
+import AnimalManagement from "@/components/admin/AnimalManagement";
+import NotificationManagement from "@/components/admin/NotificationManagement";
+import AdminSettings from "@/components/admin/AdminSettings";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("animals");
@@ -90,19 +53,10 @@ const AdminPage = () => {
     return () => clearTimeout(timeoutId);
   }, []);
 
-  const getFilteredData = (data, type) => {
-    return data.filter(item => {
-      const searchField = type === 'animals' ? item.name : 
-                         type === 'events' ? item.title : 
-                         type === 'notifications' ? item.title :
-                         item.name;
-      
-      const statusField = item.status;
-      
-      const matchesSearch = searchField.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter = filterStatus === 'all' || statusField.toLowerCase() === filterStatus.toLowerCase();
-      
-      return matchesSearch && matchesFilter;
+  const getFilteredEvents = () => {
+    return events.filter(event => {
+      const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSearch;
     });
   };
 
@@ -130,14 +84,7 @@ const AdminPage = () => {
         toast.success("New event created successfully");
       }, 600);
     } else {
-      toast.info(`Adding new ${activeTab.slice(0, -1)}`);
-      adminService.createItem(activeTab, { name: "New Item", status: "Draft" })
-        .then(() => {
-          toast.success(`New ${activeTab.slice(0, -1)} added`);
-        })
-        .catch(error => {
-          toast.error(`Failed to add: ${error.message}`);
-        });
+      toast.info(`Adding new ${activeTab.slice(0, -1)} via the dedicated form in each section`);
     }
   };
 
@@ -160,15 +107,6 @@ const AdminPage = () => {
           toast.success(`Event "${eventToEdit.title}" updated successfully`);
         }, 600);
       }
-    } else {
-      toast.info(`Editing ${activeTab.slice(0, -1)} ${id}`);
-      adminService.updateItem(activeTab, id, { status: "Updated" })
-        .then(() => {
-          toast.success(`Item updated successfully`);
-        })
-        .catch(error => {
-          toast.error(`Failed to update: ${error.message}`);
-        });
     }
   };
 
@@ -183,30 +121,7 @@ const AdminPage = () => {
           toast.success("Event deleted successfully");
         }, 600);
       }
-    } else {
-      if (confirm(`Are you sure you want to delete this ${activeTab.slice(0, -1)}?`)) {
-        adminService.deleteItem(activeTab, id)
-          .then(() => {
-            toast.success(`${activeTab.slice(0, -1)} deleted successfully`);
-          })
-          .catch(error => {
-            toast.error(`Failed to delete: ${error.message}`);
-          });
-      }
     }
-  };
-
-  const handleSendNotification = () => {
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success("Notification sent successfully");
-    }, 800);
-  };
-
-  const handleUploadImage = () => {
-    toast.info("Image upload functionality would open here");
   };
 
   const handleViewEvent = (id: string) => {
@@ -323,82 +238,7 @@ const AdminPage = () => {
           </TabsList>
           
           <TabsContent value="animals" className="mt-0">
-            <div className="bg-white rounded-xl shadow-sm p-4">
-              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                Animals Management
-              </h2>
-              
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Checkup</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {getFilteredData(animalsList, 'animals').map((animal) => (
-                      <TableRow key={animal.id}>
-                        <TableCell className="font-medium">{animal.name}</TableCell>
-                        <TableCell>{animal.location}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            animal.status === "Healthy" 
-                              ? "bg-green-100 text-green-800" 
-                              : animal.status === "Under observation"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-blue-100 text-blue-800"
-                          }`}>
-                            {animal.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{animal.lastCheckup}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleEditItem(animal.id)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDeleteItem(animal.id)}
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              <div className="mt-4 border-t pt-4">
-                <h3 className="font-medium mb-2">Quick Actions</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" className="flex items-center justify-center gap-2" onClick={handleUploadImage}>
-                    <Image className="w-4 h-4" />
-                    <span>Upload Images</span>
-                  </Button>
-                  <Button variant="outline" className="flex items-center justify-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    <span>Health Reports</span>
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <AnimalManagement searchQuery={searchQuery} filterStatus={filterStatus} />
           </TabsContent>
           
           <TabsContent value="events" className="mt-0">
@@ -511,7 +351,7 @@ const AdminPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {getFilteredData(events, 'events').map((event) => (
+                    {getFilteredEvents().map((event) => (
                       <TableRow key={event.id}>
                         <TableCell className="font-medium">{event.title}</TableCell>
                         <TableCell>{event.date} at {event.time}</TableCell>
@@ -572,233 +412,11 @@ const AdminPage = () => {
           </TabsContent>
           
           <TabsContent value="notifications" className="mt-0">
-            <div className="bg-white rounded-xl shadow-sm p-4">
-              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                Notifications Management
-              </h2>
-              
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Recipients</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {getFilteredData(notificationsList, 'notifications').map((notif) => (
-                      <TableRow key={notif.id}>
-                        <TableCell className="font-medium">{notif.title}</TableCell>
-                        <TableCell>{notif.recipients}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            notif.status === "Sent" 
-                              ? "bg-green-100 text-green-800" 
-                              : notif.status === "Scheduled"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}>
-                            {notif.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{notif.date}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleEditItem(notif.id)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDeleteItem(notif.id)}
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              <div className="mt-4 border-t pt-4">
-                <h3 className="font-medium mb-2">Send New Notification</h3>
-                <div className="space-y-2">
-                  <div>
-                    <Label htmlFor="notification-title">Title</Label>
-                    <Input 
-                      id="notification-title"
-                      type="text" 
-                      placeholder="Notification title" 
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="notification-recipients">Recipients</Label>
-                    <select 
-                      id="notification-recipients"
-                      className="w-full h-10 px-3 py-2 border rounded-md"
-                    >
-                      <option value="all">All Visitors</option>
-                      <option value="today">Today's Visitors</option>
-                      <option value="members">Members Only</option>
-                      <option value="staff">Staff Only</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="notification-message">Message</Label>
-                    <textarea 
-                      id="notification-message"
-                      placeholder="Notification message" 
-                      className="w-full p-2 border rounded-md min-h-[80px]"
-                    />
-                  </div>
-                  <div className="pt-2 flex gap-2">
-                    <Button variant="outline" className="flex-1">Save as Draft</Button>
-                    <Button onClick={handleSendNotification} className="flex-1 flex items-center justify-center gap-2">
-                      <Bell className="w-4 h-4" />
-                      <span>Send</span>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <NotificationManagement searchQuery={searchQuery} filterStatus={filterStatus} />
           </TabsContent>
           
           <TabsContent value="settings" className="mt-0">
-            <div className="bg-white rounded-xl shadow-sm p-4">
-              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <Settings className="h-5 w-5 text-primary" />
-                Admin Settings
-              </h2>
-              
-              <div className="space-y-6">
-                <div>
-                  <h3 className="font-medium mb-3">User Management</h3>
-                  
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Role</TableHead>
-                          <TableHead>Department</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {staffList.map((staff) => (
-                          <TableRow key={staff.id}>
-                            <TableCell className="font-medium">{staff.name}</TableCell>
-                            <TableCell>{staff.role}</TableCell>
-                            <TableCell>{staff.department}</TableCell>
-                            <TableCell>
-                              <span className={`px-2 py-1 rounded-full text-xs ${
-                                staff.status === "Active" 
-                                  ? "bg-green-100 text-green-800" 
-                                  : "bg-yellow-100 text-yellow-800"
-                              }`}>
-                                {staff.status}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => handleEditItem(staff.id)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                  <span className="sr-only">Edit</span>
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => handleDeleteItem(staff.id)}
-                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  <span className="sr-only">Delete</span>
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-                
-                <div className="border-t pt-4">
-                  <h3 className="font-medium mb-3">App Settings</h3>
-                  <div className="space-y-3">
-                    <div className="p-3 border rounded-lg flex justify-between items-center">
-                      <div className="flex items-center">
-                        <Bell className="w-5 h-5 mr-2 text-gray-600" />
-                        <span>Push Notifications</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">Configure</Button>
-                      </div>
-                    </div>
-                    
-                    <div className="p-3 border rounded-lg flex justify-between items-center">
-                      <div className="flex items-center">
-                        <Upload className="w-5 h-5 mr-2 text-gray-600" />
-                        <span>Data Backups</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">Last Backup: Today</Button>
-                        <Button variant="outline" size="sm">Backup Now</Button>
-                      </div>
-                    </div>
-                    
-                    <div className="p-3 border rounded-lg flex justify-between items-center">
-                      <div className="flex items-center">
-                        <Users className="w-5 h-5 mr-2 text-gray-600" />
-                        <span>Access Permissions</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">Manage</Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="border-t pt-4">
-                  <h3 className="font-medium mb-3 text-red-600">Danger Zone</h3>
-                  <div className="space-y-3">
-                    <div className="p-3 border border-red-200 bg-red-50 rounded-lg">
-                      <h4 className="font-medium flex items-center gap-2 text-red-700">
-                        <AlertTriangle className="h-4 w-4" />
-                        Reset System
-                      </h4>
-                      <p className="text-sm text-red-600 mt-1 mb-2">
-                        This action will reset all system data and cannot be undone.
-                      </p>
-                      <Button variant="destructive" size="sm">
-                        Reset System
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AdminSettings searchQuery={searchQuery} filterStatus={filterStatus} />
           </TabsContent>
         </Tabs>
         
@@ -820,3 +438,4 @@ const AdminPage = () => {
 };
 
 export default AdminPage;
+
