@@ -8,17 +8,17 @@ import BottomNavbar from "../components/BottomNavbar";
 import SearchBar from "../components/SearchBar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useMapbox } from "@/hooks/use-mapbox";
+import { useMapbox, MapLocation } from "@/hooks/map/use-mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 // Enhanced zoo locations data with more details and proper coordinates
-const zooLocations = {
+const zooLocations: Record<string, MapLocation> = {
   lion: {
     id: "lion",
     name: "Lion Enclosure",
     image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
     distance: "10 Min",
-    coordinates: [-73.975, 40.733] as [number, number], // Fixed with tuple type
+    coordinates: [-73.975, 40.733] as [number, number],
     directions: ["Head north from the main entrance", "Turn right at the food court", "The lion enclosure will be on your left"],
     type: "animal" as const
   },
@@ -27,7 +27,7 @@ const zooLocations = {
     name: "Tiger Territory",
     image: "public/lovable-uploads/385ec9d1-9804-48f9-95d9-e88ad31bedb7.png",
     distance: "15 Min",
-    coordinates: [-73.977, 40.731] as [number, number], // Fixed with tuple type
+    coordinates: [-73.977, 40.731] as [number, number],
     directions: ["Head east from the main entrance", "Follow the path past the elephant enclosure", "Tiger Territory is ahead on the right"],
     type: "animal" as const
   },
