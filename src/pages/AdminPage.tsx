@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Users, 
@@ -38,7 +37,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { adminService } from "@/services/adminService";
 
-// Sample data for demonstration
 const animalsList = [
   { id: "lion", name: "Lion", location: "Lion Enclosure", status: "Healthy", lastCheckup: "2023-07-10" },
   { id: "tiger", name: "Tiger", location: "Tiger Territory", status: "Under observation", lastCheckup: "2023-07-08" },
@@ -76,16 +74,14 @@ const AdminPage = () => {
     time: "10:00 AM",
     location: "Main Zoo Area",
     description: "",
-    image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png", // Default image
+    image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
     duration: "30 minutes",
     host: "Zoo Staff"
   });
 
-  // Mock loading effect when the component mounts
   useEffect(() => {
     setIsLoading(true);
     
-    // Simulate loading data
     const timeoutId = setTimeout(() => {
       setIsLoading(false);
       toast.success("Admin panel data loaded successfully");
@@ -94,10 +90,8 @@ const AdminPage = () => {
     return () => clearTimeout(timeoutId);
   }, []);
 
-  // Handle filtering and searching data
   const getFilteredData = (data, type) => {
     return data.filter(item => {
-      // Different field names based on data type
       const searchField = type === 'animals' ? item.name : 
                          type === 'events' ? item.title : 
                          type === 'notifications' ? item.title :
@@ -114,14 +108,12 @@ const AdminPage = () => {
 
   const handleAddItem = () => {
     if (activeTab === "events") {
-      // Validate form fields
       if (!newEventData.title) {
         toast.error("Event title is required");
         return;
       }
 
       setIsLoading(true);
-      // Show success toast after adding event
       setTimeout(() => {
         addEvent(newEventData as Omit<Event, "id">);
         setNewEventData({
@@ -139,7 +131,6 @@ const AdminPage = () => {
       }, 600);
     } else {
       toast.info(`Adding new ${activeTab.slice(0, -1)}`);
-      // In a real app, this would open a modal or form for adding new items
       adminService.createItem(activeTab, { name: "New Item", status: "Draft" })
         .then(() => {
           toast.success(`New ${activeTab.slice(0, -1)} added`);
@@ -156,9 +147,7 @@ const AdminPage = () => {
       if (eventToEdit) {
         setIsLoading(true);
         
-        // In a real app, this would open a form populated with event data
         setTimeout(() => {
-          // Mock update with a small change to demonstrate
           updateEvent(id, { 
             ...eventToEdit,
             description: eventToEdit.description ? 
@@ -173,7 +162,6 @@ const AdminPage = () => {
       }
     } else {
       toast.info(`Editing ${activeTab.slice(0, -1)} ${id}`);
-      // In a real app, this would open a modal or form for editing
       adminService.updateItem(activeTab, id, { status: "Updated" })
         .then(() => {
           toast.success(`Item updated successfully`);
@@ -186,7 +174,6 @@ const AdminPage = () => {
 
   const handleDeleteItem = (id: string) => {
     if (activeTab === "events") {
-      // Show confirmation dialog
       if (confirm("Are you sure you want to delete this event?")) {
         setIsLoading(true);
         
@@ -197,7 +184,6 @@ const AdminPage = () => {
         }, 600);
       }
     } else {
-      // In a real app, this would show a confirmation dialog
       if (confirm(`Are you sure you want to delete this ${activeTab.slice(0, -1)}?`)) {
         adminService.deleteItem(activeTab, id)
           .then(() => {
@@ -213,7 +199,6 @@ const AdminPage = () => {
   const handleSendNotification = () => {
     setIsLoading(true);
     
-    // Simulate sending notification
     setTimeout(() => {
       setIsLoading(false);
       toast.success("Notification sent successfully");
@@ -221,7 +206,6 @@ const AdminPage = () => {
   };
 
   const handleUploadImage = () => {
-    // In a real app, this would open a file dialog
     toast.info("Image upload functionality would open here");
   };
 
@@ -232,14 +216,12 @@ const AdminPage = () => {
   const handleRefreshData = () => {
     setIsLoading(true);
     
-    // Simulate refreshing data
     setTimeout(() => {
       setIsLoading(false);
       toast.success(`${activeTab} data refreshed`);
     }, 800);
   };
 
-  // Render loading state
   if (isLoading) {
     return (
       <div className="min-h-screen pb-6 bg-gray-50">
@@ -282,7 +264,6 @@ const AdminPage = () => {
             </div>
           </div>
           
-          {/* Search and Filter Controls */}
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
@@ -575,9 +556,11 @@ const AdminPage = () => {
               <div className="mt-4 border-t pt-4">
                 <h3 className="font-medium mb-2">Event Planning</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" className="flex items-center justify-center gap-2" as={Link} to="/events">
-                    <Calendar className="w-4 h-4" />
-                    <span>View Calendar</span>
+                  <Button variant="outline" className="flex items-center justify-center gap-2" asChild>
+                    <Link to="/events">
+                      <Calendar className="w-4 h-4" />
+                      <span>View Calendar</span>
+                    </Link>
                   </Button>
                   <Button variant="outline" className="flex items-center justify-center gap-2">
                     <MessageSquare className="w-4 h-4" />
@@ -819,7 +802,6 @@ const AdminPage = () => {
           </TabsContent>
         </Tabs>
         
-        {/* Status Bar */}
         <div className="mt-6 bg-white rounded-lg p-3 shadow-sm flex justify-between items-center text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <Info className="h-4 w-4" />
