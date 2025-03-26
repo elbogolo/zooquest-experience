@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import { Navigation, MapPin, Compass, X, RotateCcw, Search, AlertCircle, Route } from "lucide-react";
@@ -7,141 +8,104 @@ import BottomNavbar from "../components/BottomNavbar";
 import SearchBar from "../components/SearchBar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useMapbox } from "@/hooks/use-mapbox";
+import "mapbox-gl/dist/mapbox-gl.css";
 
-// Enhanced zoo locations data with more details
+// Enhanced zoo locations data with more details and proper coordinates
 const zooLocations = {
   lion: {
+    id: "lion",
     name: "Lion Enclosure",
     image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
     distance: "10 Min",
-    coordinates: { x: 35, y: 25 },
+    coordinates: [-73.975, 40.733], // Example coordinates
     directions: ["Head north from the main entrance", "Turn right at the food court", "The lion enclosure will be on your left"],
     type: "animal"
   },
   tiger: {
+    id: "tiger",
     name: "Tiger Territory",
     image: "public/lovable-uploads/385ec9d1-9804-48f9-95d9-e88ad31bedb7.png",
     distance: "15 Min",
-    coordinates: { x: 65, y: 30 },
+    coordinates: [-73.977, 40.731], // Example coordinates
     directions: ["Head east from the main entrance", "Follow the path past the elephant enclosure", "Tiger Territory is ahead on the right"],
     type: "animal"
   },
   gorilla: {
+    id: "gorilla",
     name: "Gorilla Habitat",
     image: "public/lovable-uploads/4fe1f1a1-c3d6-477b-b486-5590bda76085.png",
     distance: "20 Min",
-    coordinates: { x: 25, y: 60 },
+    coordinates: [-73.981, 40.734], // Example coordinates
     directions: ["Head west from the main entrance", "Take the jungle trail", "Follow signs to the Great Ape House"],
     type: "animal"
   },
   peacock: {
+    id: "peacock",
     name: "Peacock Area",
     image: "public/lovable-uploads/d65de9b2-e507-4511-a47c-4962de992a26.png",
     distance: "5 Min",
-    coordinates: { x: 50, y: 45 },
+    coordinates: [-73.979, 40.729], // Example coordinates
     directions: ["Head straight from the main entrance", "Look for the open garden area", "Peacocks roam freely in this area"],
     type: "animal"
   },
   crocodile: {
+    id: "crocodile",
     name: "Crocodile Pond",
     image: "public/lovable-uploads/913b61a8-cf4c-4183-9809-0c617218d36c.png",
     distance: "12 Min",
-    coordinates: { x: 70, y: 65 },
+    coordinates: [-73.973, 40.732], // Example coordinates
     directions: ["Head southeast from the main entrance", "Follow the water trail", "The crocodile pond will be visible on your right"],
     type: "animal"
   },
   tortoise: {
+    id: "tortoise",
     name: "Tortoise Enclosure",
     image: "public/lovable-uploads/009a33ba-77b2-49a3-86ae-0586197bf4ab.png",
     distance: "8 Min",
-    coordinates: { x: 45, y: 70 },
+    coordinates: [-73.976, 40.735], // Example coordinates
     directions: ["Head northeast from the main entrance", "Pass by the gift shop", "The tortoise enclosure is beyond the small hill"],
     type: "animal"
   },
   zebra: {
+    id: "zebra",
     name: "Zebra Grasslands",
     image: "public/lovable-uploads/c0779203-cebe-4f61-be65-f8939ee46040.png",
     distance: "18 Min",
-    coordinates: { x: 20, y: 40 },
+    coordinates: [-73.982, 40.730], // Example coordinates
     directions: ["Head northwest from the main entrance", "Follow the safari path", "The zebra grasslands will be on your left"],
     type: "animal"
   },
   shop: {
+    id: "shop",
     name: "Gift Shop",
     image: "public/lovable-uploads/e75bf6ec-5927-4fae-9fff-7807edd185ad.png",
     distance: "5 Min",
-    coordinates: { x: 55, y: 20 },
+    coordinates: [-73.978, 40.728], // Example coordinates
     directions: ["Head east from the main entrance", "It's the large building with the green roof", "The gift shop is near the food court"],
     type: "facility"
   },
-  // Adding event locations
   event1: {
+    id: "event1",
     name: "Elephant Show",
     image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
     distance: "7 Min",
-    coordinates: { x: 60, y: 50 },
+    coordinates: [-73.974, 40.736], // Example coordinates
     directions: ["Head northeast from the main entrance", "Pass the giraffe enclosure", "The elephant arena will be ahead on your right"],
     type: "event"
   },
   event2: {
+    id: "event2",
     name: "Penguin Feeding",
     image: "public/lovable-uploads/385ec9d1-9804-48f9-95d9-e88ad31bedb7.png",
     distance: "12 Min",
-    coordinates: { x: 30, y: 35 },
+    coordinates: [-73.980, 40.733], // Example coordinates
     directions: ["Head west from the main entrance", "Follow signs to the Aquatic Zone", "The penguin habitat is located inside the building"],
     type: "event"
   }
 };
 
 type LocationKey = keyof typeof zooLocations;
-
-interface LocationProps {
-  id: LocationKey;
-  left: string;
-  top: string;
-  type: "animal" | "event" | "facility";
-  active: boolean;
-  onClick: () => void;
-}
-
-// New component for location pins on the map
-const LocationPin = ({ id, left, top, type, active, onClick }: LocationProps) => {
-  return (
-    <button
-      className={cn(
-        "absolute transition-all duration-300 transform hover:scale-110 z-10",
-        active ? "z-20 scale-125" : ""
-      )}
-      style={{ left, top }}
-      onClick={onClick}
-    >
-      <div className={cn(
-        "rounded-full flex items-center justify-center shadow-lg w-8 h-8",
-        type === "animal" ? "bg-zoo-primary" : 
-        type === "event" ? "bg-orange-500" : "bg-blue-500"
-      )}>
-        <MapPin className="w-4 h-4 text-white" />
-      </div>
-      {active && (
-        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-white rounded-full border-2 border-zoo-primary animate-pulse"></div>
-      )}
-    </button>
-  );
-};
-
-// User location marker component
-const UserLocationMarker = ({ left, top }: { left: string; top: string }) => {
-  return (
-    <div className="absolute transition-all duration-300" style={{ left, top }}>
-      <div className="relative">
-        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-lg animate-pulse">
-          <Navigation className="w-4 h-4 text-white" />
-        </div>
-        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-white rounded-full border-2 border-blue-600"></div>
-      </div>
-    </div>
-  );
-};
 
 const MapPage = () => {
   const [searchParams] = useSearchParams();
@@ -154,38 +118,51 @@ const MapPage = () => {
   const [activeDirection, setActiveDirection] = useState(0);
   const [searchResults, setSearchResults] = useState<LocationKey[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<LocationKey | null>(destinationId as LocationKey || null);
-  const [userPosition, setUserPosition] = useState({ x: 45, y: 75 }); // Default user position
   const [filterType, setFilterType] = useState<"all" | "animal" | "event" | "facility">("all");
   
-  const destination = selectedLocation ? zooLocations[selectedLocation] : null;
+  // Initialize mapbox hook
+  const {
+    mapContainer,
+    isLoaded,
+    selectLocation,
+    selectedLocation,
+    resetView,
+    updateUserLocation,
+    filterLocations
+  } = useMapbox({
+    initialCenter: [-73.979, 40.732], // Default center for the zoo map
+    initialZoom: 15.5,
+    locations: zooLocations
+  });
+
+  const destination = selectedLocation ? zooLocations[selectedLocation as LocationKey] : null;
 
   // Effect to handle destination from URL params
   useEffect(() => {
-    if (destinationId) {
-      setSelectedLocation(destinationId as LocationKey);
+    if (destinationId && zooLocations[destinationId as LocationKey]) {
+      selectLocation(destinationId as string);
       setShowDirections(true);
       toast.success(`Directions to ${zooLocations[destinationId as LocationKey]?.name || 'destination'} loaded`);
     }
-  }, [destinationId]);
+  }, [destinationId, isLoaded]);
 
   // Effect to handle event location from state
   useEffect(() => {
-    if (eventLocation) {
+    if (eventLocation && isLoaded) {
       // Find the event by name (in a real app, this would be by ID)
       const eventKey = Object.keys(zooLocations).find(
         key => zooLocations[key as LocationKey].name.toLowerCase() === eventLocation.toLowerCase()
       ) as LocationKey | undefined;
       
       if (eventKey) {
-        setSelectedLocation(eventKey);
+        selectLocation(eventKey);
         setShowDirections(true);
         toast.success(`Directions to ${zooLocations[eventKey].name} loaded`);
       } else {
         toast.error("Event location not found on map");
       }
     }
-  }, [eventLocation]);
+  }, [eventLocation, isLoaded]);
 
   // Effect for search functionality
   useEffect(() => {
@@ -204,35 +181,36 @@ const MapPage = () => {
   const handleNavigateToLocation = (locationKey: LocationKey) => {
     setShowSearchResults(false);
     setSearch("");
-    setSelectedLocation(locationKey);
+    selectLocation(locationKey);
     setShowDirections(true);
     setActiveDirection(0);
     
-    // In a real app, this would calculate the route from user position to destination
     toast.success(`Navigating to ${zooLocations[locationKey].name}`);
   };
 
   // Function to handle getting user's current location
   const handleGetCurrentLocation = () => {
-    // In a real app, this would use device geolocation
     toast.info("Getting your current location...");
     
-    // Simulate location update
+    // Update user location with our custom hook function
+    updateUserLocation();
+    
     setTimeout(() => {
-      // Randomize position slightly to simulate movement
-      setUserPosition({
-        x: userPosition.x + (Math.random() * 4 - 2),
-        y: userPosition.y + (Math.random() * 4 - 2)
-      });
       toast.success("Location updated");
-    }, 1500);
+    }, 1000);
   };
 
   // Function to reset user's view on the map
   const handleResetView = () => {
-    setSelectedLocation(null);
+    resetView();
     setShowDirections(false);
     toast.info("Map view reset");
+  };
+
+  // Apply filter both to local state and mapbox hook
+  const handleFilterChange = (type: "all" | "animal" | "event" | "facility") => {
+    setFilterType(type);
+    filterLocations(type);
   };
 
   // Functions to navigate through directions
@@ -250,31 +228,22 @@ const MapPage = () => {
     }
   };
 
-  // Get visible locations based on filter
-  const getVisibleLocations = () => {
-    return Object.keys(zooLocations).filter(key => {
-      if (filterType === "all") return true;
-      return zooLocations[key as LocationKey].type === filterType;
-    }) as LocationKey[];
-  };
-
   return (
     <div className="min-h-screen bg-white">
       <PageHeader title="Zoo Map" showBackButton showThemeToggle showUserAvatar />
       
-      <div className="h-screen w-full bg-gray-200 relative pt-16">
-        <div className="absolute inset-0 pt-16 bg-gray-200">
-          <img
-            src="public/lovable-uploads/f74294e2-bf7f-442d-ab97-78c98dcc394d.png"
-            alt="Zoo Map"
-            className="w-full h-full object-cover"
-          />
-        </div>
+      <div className="h-screen w-full relative pt-16">
+        {/* Map container */}
+        <div 
+          ref={mapContainer} 
+          className="absolute inset-0 pt-16"
+          style={{ marginTop: '0' }}
+        />
         
         {/* Filter buttons */}
         <div className="absolute top-20 left-4 right-4 z-10 flex items-center justify-between space-x-2">
           <button 
-            onClick={() => setFilterType("all")}
+            onClick={() => handleFilterChange("all")}
             className={cn(
               "py-1 px-3 text-xs rounded-full",
               filterType === "all" 
@@ -285,7 +254,7 @@ const MapPage = () => {
             All
           </button>
           <button 
-            onClick={() => setFilterType("animal")}
+            onClick={() => handleFilterChange("animal")}
             className={cn(
               "py-1 px-3 text-xs rounded-full",
               filterType === "animal" 
@@ -296,7 +265,7 @@ const MapPage = () => {
             Animals
           </button>
           <button 
-            onClick={() => setFilterType("event")}
+            onClick={() => handleFilterChange("event")}
             className={cn(
               "py-1 px-3 text-xs rounded-full",
               filterType === "event" 
@@ -307,7 +276,7 @@ const MapPage = () => {
             Events
           </button>
           <button 
-            onClick={() => setFilterType("facility")}
+            onClick={() => handleFilterChange("facility")}
             className={cn(
               "py-1 px-3 text-xs rounded-full",
               filterType === "facility" 
@@ -371,47 +340,6 @@ const MapPage = () => {
             <AlertCircle className="w-5 h-5 text-zoo-primary" />
           </button>
         </div>
-
-        {/* Draw path between user and destination */}
-        {selectedLocation && (
-          <div className="absolute inset-0 z-5 pointer-events-none">
-            <svg width="100%" height="100%" className="absolute inset-0">
-              <path
-                d={`M ${userPosition.x}% ${userPosition.y}% Q ${
-                  (userPosition.x + zooLocations[selectedLocation].coordinates.x) / 2 + 10
-                }% ${
-                  (userPosition.y + zooLocations[selectedLocation].coordinates.y) / 2 - 10
-                }% ${zooLocations[selectedLocation].coordinates.x}% ${
-                  zooLocations[selectedLocation].coordinates.y
-                }%`}
-                stroke="#4FD1C5"
-                strokeWidth="3"
-                strokeDasharray="5,5"
-                fill="none"
-                className="animate-dash"
-              />
-            </svg>
-          </div>
-        )}
-        
-        {/* User location marker */}
-        <UserLocationMarker 
-          left={`${userPosition.x}%`} 
-          top={`${userPosition.y}%`} 
-        />
-        
-        {/* Location pins on the map */}
-        {getVisibleLocations().map((key) => (
-          <LocationPin
-            key={key}
-            id={key}
-            left={`${zooLocations[key].coordinates.x}%`}
-            top={`${zooLocations[key].coordinates.y}%`}
-            type={zooLocations[key].type as "animal" | "event" | "facility"}
-            active={selectedLocation === key}
-            onClick={() => handleNavigateToLocation(key)}
-          />
-        ))}
         
         {/* Directions panel */}
         {showDirections && destination && (
@@ -473,7 +401,7 @@ const MapPage = () => {
                 <button 
                   onClick={() => {
                     setShowDirections(false);
-                    setSelectedLocation(null);
+                    selectLocation(null);
                   }}
                   className="w-10 h-10 rounded-full bg-zoo-primary text-white flex items-center justify-center"
                 >
