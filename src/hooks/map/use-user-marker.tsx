@@ -1,6 +1,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import mapboxgl from 'mapbox-gl';
+import { toast } from 'sonner';
 
 interface UseUserMarkerProps {
   map: React.MutableRefObject<mapboxgl.Map | null>;
@@ -12,6 +13,7 @@ interface UseUserMarkerReturn {
   userLocation: [number, number];
   setUserLocation: React.Dispatch<React.SetStateAction<[number, number]>>;
   updateUserLocation: () => void;
+  isLocating: boolean;
 }
 
 export const useUserMarker = ({
@@ -20,7 +22,9 @@ export const useUserMarker = ({
   initialUserLocation
 }: UseUserMarkerProps): UseUserMarkerReturn => {
   const [userLocation, setUserLocation] = useState<[number, number]>(initialUserLocation);
+  const [isLocating, setIsLocating] = useState(false);
   const userMarker = useRef<mapboxgl.Marker | null>(null);
+  const watchId = useRef<number | null>(null);
 
   // Add user marker
   useEffect(() => {
@@ -43,6 +47,9 @@ export const useUserMarker = ({
       if (userMarker.current) {
         userMarker.current.remove();
       }
+      if (watchId.current !== null) {
+        navigator.geolocation.clearWatch(watchId.current);
+      }
     };
   }, [isLoaded, map]);
 
@@ -53,22 +60,61 @@ export const useUserMarker = ({
     }
   }, [userLocation]);
 
-  // Function to update user location (simulated)
+  // Function to update user location using browser geolocation
   const updateUserLocation = () => {
-    if (!map.current || !userMarker.current) return;
+    setIsLocating(true);
     
-    // Generate a slightly randomized location
-    const newLocation: [number, number] = [
-      userLocation[0] + (Math.random() * 0.001 - 0.0005),
-      userLocation[1] + (Math.random() * 0.001 - 0.0005)
-    ];
-    
-    setUserLocation(newLocation);
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      setIsLocating(false);
+      return;
+    }
+
+    if (watchId.current !== null) {
+      navigator.geolocation.clearWatch(watchId.current);
+    }
+
+    watchId.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const newLocation: [number, number] = [
+          position.coords.longitude,
+          position.coords.latitude
+        ];
+        
+        setUserLocation(newLocation);
+        setIsLocating(false);
+        toast.success("Location updated");
+      },
+      (error) => {
+        let errorMessage = "Unable to get your location";
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Location access was denied";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location information is unavailable";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out";
+            break;
+        }
+        
+        toast.error(errorMessage);
+        setIsLocating(false);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 30000,
+        timeout: 27000
+      }
+    );
   };
 
   return {
     userLocation,
     setUserLocation,
-    updateUserLocation
+    updateUserLocation,
+    isLocating
   };
 };

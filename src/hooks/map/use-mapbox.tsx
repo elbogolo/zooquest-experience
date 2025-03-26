@@ -20,6 +20,11 @@ interface UseMapboxReturn {
   resetView: () => void;
   updateUserLocation: () => void;
   filterLocations: (type: 'all' | 'animal' | 'event' | 'facility') => void;
+  isLocating: boolean;
+  directions: string[];
+  isRouteFetching: boolean;
+  routeDistance: string | null;
+  routeDuration: string | null;
 }
 
 export const useMapbox = ({
@@ -40,7 +45,7 @@ export const useMapbox = ({
   const userInitialLocation: [number, number] = [initialCenter[0] - 0.003, initialCenter[1] - 0.002];
   
   // Handle user marker
-  const { userLocation, updateUserLocation } = useUserMarker({
+  const { userLocation, updateUserLocation, isLocating } = useUserMarker({
     map,
     isLoaded,
     initialUserLocation: userInitialLocation
@@ -56,8 +61,8 @@ export const useMapbox = ({
     onLocationSelect: (locationId) => setSelectedLocation(locationId)
   });
 
-  // Handle route path drawing
-  useRoutePath({
+  // Handle route path drawing and get directions
+  const { directions, isRouteFetching, distance: routeDistance, duration: routeDuration } = useRoutePath({
     map,
     isLoaded,
     selectedLocation,
@@ -89,7 +94,12 @@ export const useMapbox = ({
     selectedLocation,
     resetView,
     updateUserLocation,
-    filterLocations
+    filterLocations,
+    isLocating,
+    directions,
+    isRouteFetching,
+    routeDistance,
+    routeDuration
   };
 };
 

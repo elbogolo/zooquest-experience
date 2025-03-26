@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
-import { Navigation, MapPin, Compass, X, RotateCcw, Search, AlertCircle, Route } from "lucide-react";
+import { Navigation, MapPin, Compass, X, RotateCcw, Search, AlertCircle, Route, Loader } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "../components/PageHeader";
 import BottomNavbar from "../components/BottomNavbar";
@@ -11,7 +10,6 @@ import { cn } from "@/lib/utils";
 import { useMapbox, MapLocation } from "@/hooks/map/use-mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-// Enhanced zoo locations data with more details and proper coordinates
 const zooLocations: Record<string, MapLocation> = {
   lion: {
     id: "lion",
@@ -36,7 +34,7 @@ const zooLocations: Record<string, MapLocation> = {
     name: "Gorilla Habitat",
     image: "public/lovable-uploads/4fe1f1a1-c3d6-477b-b486-5590bda76085.png",
     distance: "20 Min",
-    coordinates: [-73.981, 40.734] as [number, number], // Fixed with tuple type
+    coordinates: [-73.981, 40.734] as [number, number],
     directions: ["Head west from the main entrance", "Take the jungle trail", "Follow signs to the Great Ape House"],
     type: "animal" as const
   },
@@ -45,7 +43,7 @@ const zooLocations: Record<string, MapLocation> = {
     name: "Peacock Area",
     image: "public/lovable-uploads/d65de9b2-e507-4511-a47c-4962de992a26.png",
     distance: "5 Min",
-    coordinates: [-73.979, 40.729] as [number, number], // Fixed with tuple type
+    coordinates: [-73.979, 40.729] as [number, number],
     directions: ["Head straight from the main entrance", "Look for the open garden area", "Peacocks roam freely in this area"],
     type: "animal" as const
   },
@@ -54,7 +52,7 @@ const zooLocations: Record<string, MapLocation> = {
     name: "Crocodile Pond",
     image: "public/lovable-uploads/913b61a8-cf4c-4183-9809-0c617218d36c.png",
     distance: "12 Min",
-    coordinates: [-73.973, 40.732] as [number, number], // Fixed with tuple type
+    coordinates: [-73.973, 40.732] as [number, number],
     directions: ["Head southeast from the main entrance", "Follow the water trail", "The crocodile pond will be visible on your right"],
     type: "animal" as const
   },
@@ -63,7 +61,7 @@ const zooLocations: Record<string, MapLocation> = {
     name: "Tortoise Enclosure",
     image: "public/lovable-uploads/009a33ba-77b2-49a3-86ae-0586197bf4ab.png",
     distance: "8 Min",
-    coordinates: [-73.976, 40.735] as [number, number], // Fixed with tuple type
+    coordinates: [-73.976, 40.735] as [number, number],
     directions: ["Head northeast from the main entrance", "Pass by the gift shop", "The tortoise enclosure is beyond the small hill"],
     type: "animal" as const
   },
@@ -72,7 +70,7 @@ const zooLocations: Record<string, MapLocation> = {
     name: "Zebra Grasslands",
     image: "public/lovable-uploads/c0779203-cebe-4f61-be65-f8939ee46040.png",
     distance: "18 Min",
-    coordinates: [-73.982, 40.730] as [number, number], // Fixed with tuple type
+    coordinates: [-73.982, 40.730] as [number, number],
     directions: ["Head northwest from the main entrance", "Follow the safari path", "The zebra grasslands will be on your left"],
     type: "animal" as const
   },
@@ -81,7 +79,7 @@ const zooLocations: Record<string, MapLocation> = {
     name: "Gift Shop",
     image: "public/lovable-uploads/e75bf6ec-5927-4fae-9fff-7807edd185ad.png",
     distance: "5 Min",
-    coordinates: [-73.978, 40.728] as [number, number], // Fixed with tuple type
+    coordinates: [-73.978, 40.728] as [number, number],
     directions: ["Head east from the main entrance", "It's the large building with the green roof", "The gift shop is near the food court"],
     type: "facility" as const
   },
@@ -90,7 +88,7 @@ const zooLocations: Record<string, MapLocation> = {
     name: "Elephant Show",
     image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
     distance: "7 Min",
-    coordinates: [-73.974, 40.736] as [number, number], // Fixed with tuple type
+    coordinates: [-73.974, 40.736] as [number, number],
     directions: ["Head northeast from the main entrance", "Pass the giraffe enclosure", "The elephant arena will be ahead on your right"],
     type: "event" as const
   },
@@ -99,7 +97,7 @@ const zooLocations: Record<string, MapLocation> = {
     name: "Penguin Feeding",
     image: "public/lovable-uploads/385ec9d1-9804-48f9-95d9-e88ad31bedb7.png",
     distance: "12 Min",
-    coordinates: [-73.980, 40.733] as [number, number], // Fixed with tuple type
+    coordinates: [-73.980, 40.733] as [number, number],
     directions: ["Head west from the main entrance", "Follow signs to the Aquatic Zone", "The penguin habitat is located inside the building"],
     type: "event" as const
   }
@@ -120,7 +118,6 @@ const MapPage = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [filterType, setFilterType] = useState<"all" | "animal" | "event" | "facility">("all");
   
-  // Initialize mapbox hook
   const {
     mapContainer,
     isLoaded,
@@ -128,16 +125,20 @@ const MapPage = () => {
     selectedLocation,
     resetView,
     updateUserLocation,
-    filterLocations
+    filterLocations,
+    isLocating,
+    directions,
+    isRouteFetching,
+    routeDistance,
+    routeDuration
   } = useMapbox({
-    initialCenter: [-73.979, 40.732], // Default center for the zoo map
+    initialCenter: [-73.979, 40.732],
     initialZoom: 15.5,
     locations: zooLocations
   });
 
   const destination = selectedLocation ? zooLocations[selectedLocation as LocationKey] : null;
 
-  // Effect to handle destination from URL params
   useEffect(() => {
     if (destinationId && zooLocations[destinationId as LocationKey]) {
       selectLocation(destinationId as string);
@@ -146,10 +147,8 @@ const MapPage = () => {
     }
   }, [destinationId, isLoaded]);
 
-  // Effect to handle event location from state
   useEffect(() => {
     if (eventLocation && isLoaded) {
-      // Find the event by name (in a real app, this would be by ID)
       const eventKey = Object.keys(zooLocations).find(
         key => zooLocations[key as LocationKey].name.toLowerCase() === eventLocation.toLowerCase()
       ) as LocationKey | undefined;
@@ -164,7 +163,12 @@ const MapPage = () => {
     }
   }, [eventLocation, isLoaded]);
 
-  // Effect for search functionality
+  useEffect(() => {
+    if (directions.length > 0) {
+      setActiveDirection(0);
+    }
+  }, [directions]);
+
   useEffect(() => {
     if (search.length > 1) {
       const results = Object.keys(zooLocations).filter((key) => 
@@ -177,7 +181,6 @@ const MapPage = () => {
     }
   }, [search]);
 
-  // Function to handle navigation to a selected location
   const handleNavigateToLocation = (locationKey: LocationKey) => {
     setShowSearchResults(false);
     setSearch("");
@@ -188,34 +191,23 @@ const MapPage = () => {
     toast.success(`Navigating to ${zooLocations[locationKey].name}`);
   };
 
-  // Function to handle getting user's current location
   const handleGetCurrentLocation = () => {
-    toast.info("Getting your current location...");
-    
-    // Update user location with our custom hook function
     updateUserLocation();
-    
-    setTimeout(() => {
-      toast.success("Location updated");
-    }, 1000);
   };
 
-  // Function to reset user's view on the map
   const handleResetView = () => {
     resetView();
     setShowDirections(false);
     toast.info("Map view reset");
   };
 
-  // Apply filter both to local state and mapbox hook
   const handleFilterChange = (type: "all" | "animal" | "event" | "facility") => {
     setFilterType(type);
     filterLocations(type);
   };
 
-  // Functions to navigate through directions
   const nextDirection = () => {
-    if (destination && activeDirection < destination.directions.length - 1) {
+    if (directions && activeDirection < directions.length - 1) {
       setActiveDirection(activeDirection + 1);
     } else {
       toast.success("You have reached your destination!");
@@ -233,14 +225,12 @@ const MapPage = () => {
       <PageHeader title="Zoo Map" showBackButton showThemeToggle showUserAvatar />
       
       <div className="h-screen w-full relative pt-16">
-        {/* Map container */}
         <div 
           ref={mapContainer} 
           className="absolute inset-0 pt-16"
           style={{ marginTop: '0' }}
         />
         
-        {/* Filter buttons */}
         <div className="absolute top-20 left-4 right-4 z-10 flex items-center justify-between space-x-2">
           <button 
             onClick={() => handleFilterChange("all")}
@@ -317,14 +307,21 @@ const MapPage = () => {
           )}
         </div>
         
-        {/* Map control buttons */}
         <div className="absolute bottom-32 right-4 flex flex-col gap-2">
           <button 
             onClick={handleGetCurrentLocation}
-            className="w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center"
+            className={cn(
+              "w-10 h-10 rounded-full shadow-md flex items-center justify-center",
+              isLocating ? "bg-zoo-primary text-white" : "bg-white text-zoo-primary"
+            )}
             aria-label="Get current location"
+            disabled={isLocating}
           >
-            <Compass className="w-5 h-5 text-zoo-primary" />
+            {isLocating ? (
+              <Loader className="w-5 h-5 animate-spin" />
+            ) : (
+              <Compass className="w-5 h-5" />
+            )}
           </button>
           <button 
             onClick={handleResetView}
@@ -341,7 +338,6 @@ const MapPage = () => {
           </button>
         </div>
         
-        {/* Directions panel */}
         {showDirections && destination && (
           <div className="absolute bottom-20 left-0 right-0 p-4">
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -355,20 +351,36 @@ const MapPage = () => {
                   <h3 className="font-semibold">{destination.name}</h3>
                   <p className="text-sm text-gray-500 flex items-center">
                     <Route className="w-3 h-3 mr-1" />
-                    {destination.distance} to destination
+                    {isRouteFetching ? (
+                      <span className="flex items-center">
+                        <Loader className="w-3 h-3 mr-1 animate-spin" /> Calculating route...
+                      </span>
+                    ) : (
+                      <span>{routeDistance || destination.distance} ({routeDuration || "calculating..."})</span>
+                    )}
                   </p>
                 </div>
               </div>
               
               <div className="p-3 border-b border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-500">Step {activeDirection + 1} of {destination.directions.length}</span>
+                  <span className="text-xs text-gray-500">
+                    {isRouteFetching ? (
+                      <span className="flex items-center">
+                        <Loader className="w-3 h-3 mr-1 animate-spin" /> Loading directions...
+                      </span>
+                    ) : directions.length > 0 ? (
+                      `Step ${activeDirection + 1} of ${directions.length}`
+                    ) : (
+                      `Step ${activeDirection + 1} of ${destination.directions.length}`
+                    )}
+                  </span>
                   <div className="flex space-x-2">
                     <Button 
                       variant="outline" 
                       size="sm" 
                       onClick={prevDirection}
-                      disabled={activeDirection === 0}
+                      disabled={activeDirection === 0 || isRouteFetching}
                       className="h-6 px-2"
                     >
                       Previous
@@ -377,6 +389,9 @@ const MapPage = () => {
                       variant="outline" 
                       size="sm" 
                       onClick={nextDirection}
+                      disabled={isRouteFetching || 
+                        (directions.length > 0 && activeDirection >= directions.length - 1) ||
+                        (directions.length === 0 && activeDirection >= destination.directions.length - 1)}
                       className="h-6 px-2"
                     >
                       Next
@@ -384,7 +399,13 @@ const MapPage = () => {
                   </div>
                 </div>
                 <p className="font-medium text-gray-800">
-                  {destination.directions[activeDirection]}
+                  {isRouteFetching ? (
+                    "Calculating the best route to your destination..."
+                  ) : directions.length > 0 ? (
+                    directions[activeDirection]
+                  ) : (
+                    destination.directions[activeDirection]
+                  )}
                 </p>
               </div>
               
@@ -392,8 +413,13 @@ const MapPage = () => {
                 <button 
                   onClick={handleGetCurrentLocation}
                   className="w-10 h-10 rounded-full text-zoo-primary hover:bg-zoo-secondary flex items-center justify-center"
+                  disabled={isLocating}
                 >
-                  <Compass className="w-5 h-5" />
+                  {isLocating ? (
+                    <Loader className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Compass className="w-5 h-5" />
+                  )}
                 </button>
                 <button className="w-10 h-10 rounded-full text-zoo-primary hover:bg-zoo-secondary flex items-center justify-center">
                   <Route className="w-5 h-5" />
@@ -419,3 +445,4 @@ const MapPage = () => {
 };
 
 export default MapPage;
+
