@@ -18,90 +18,90 @@ const zooLocations = {
     name: "Lion Enclosure",
     image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
     distance: "10 Min",
-    coordinates: [-73.975, 40.733], // Example coordinates
+    coordinates: [-73.975, 40.733] as [number, number], // Fixed with tuple type
     directions: ["Head north from the main entrance", "Turn right at the food court", "The lion enclosure will be on your left"],
-    type: "animal"
+    type: "animal" as const
   },
   tiger: {
     id: "tiger",
     name: "Tiger Territory",
     image: "public/lovable-uploads/385ec9d1-9804-48f9-95d9-e88ad31bedb7.png",
     distance: "15 Min",
-    coordinates: [-73.977, 40.731], // Example coordinates
+    coordinates: [-73.977, 40.731] as [number, number], // Fixed with tuple type
     directions: ["Head east from the main entrance", "Follow the path past the elephant enclosure", "Tiger Territory is ahead on the right"],
-    type: "animal"
+    type: "animal" as const
   },
   gorilla: {
     id: "gorilla",
     name: "Gorilla Habitat",
     image: "public/lovable-uploads/4fe1f1a1-c3d6-477b-b486-5590bda76085.png",
     distance: "20 Min",
-    coordinates: [-73.981, 40.734], // Example coordinates
+    coordinates: [-73.981, 40.734] as [number, number], // Fixed with tuple type
     directions: ["Head west from the main entrance", "Take the jungle trail", "Follow signs to the Great Ape House"],
-    type: "animal"
+    type: "animal" as const
   },
   peacock: {
     id: "peacock",
     name: "Peacock Area",
     image: "public/lovable-uploads/d65de9b2-e507-4511-a47c-4962de992a26.png",
     distance: "5 Min",
-    coordinates: [-73.979, 40.729], // Example coordinates
+    coordinates: [-73.979, 40.729] as [number, number], // Fixed with tuple type
     directions: ["Head straight from the main entrance", "Look for the open garden area", "Peacocks roam freely in this area"],
-    type: "animal"
+    type: "animal" as const
   },
   crocodile: {
     id: "crocodile",
     name: "Crocodile Pond",
     image: "public/lovable-uploads/913b61a8-cf4c-4183-9809-0c617218d36c.png",
     distance: "12 Min",
-    coordinates: [-73.973, 40.732], // Example coordinates
+    coordinates: [-73.973, 40.732] as [number, number], // Fixed with tuple type
     directions: ["Head southeast from the main entrance", "Follow the water trail", "The crocodile pond will be visible on your right"],
-    type: "animal"
+    type: "animal" as const
   },
   tortoise: {
     id: "tortoise",
     name: "Tortoise Enclosure",
     image: "public/lovable-uploads/009a33ba-77b2-49a3-86ae-0586197bf4ab.png",
     distance: "8 Min",
-    coordinates: [-73.976, 40.735], // Example coordinates
+    coordinates: [-73.976, 40.735] as [number, number], // Fixed with tuple type
     directions: ["Head northeast from the main entrance", "Pass by the gift shop", "The tortoise enclosure is beyond the small hill"],
-    type: "animal"
+    type: "animal" as const
   },
   zebra: {
     id: "zebra",
     name: "Zebra Grasslands",
     image: "public/lovable-uploads/c0779203-cebe-4f61-be65-f8939ee46040.png",
     distance: "18 Min",
-    coordinates: [-73.982, 40.730], // Example coordinates
+    coordinates: [-73.982, 40.730] as [number, number], // Fixed with tuple type
     directions: ["Head northwest from the main entrance", "Follow the safari path", "The zebra grasslands will be on your left"],
-    type: "animal"
+    type: "animal" as const
   },
   shop: {
     id: "shop",
     name: "Gift Shop",
     image: "public/lovable-uploads/e75bf6ec-5927-4fae-9fff-7807edd185ad.png",
     distance: "5 Min",
-    coordinates: [-73.978, 40.728], // Example coordinates
+    coordinates: [-73.978, 40.728] as [number, number], // Fixed with tuple type
     directions: ["Head east from the main entrance", "It's the large building with the green roof", "The gift shop is near the food court"],
-    type: "facility"
+    type: "facility" as const
   },
   event1: {
     id: "event1",
     name: "Elephant Show",
     image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
     distance: "7 Min",
-    coordinates: [-73.974, 40.736], // Example coordinates
+    coordinates: [-73.974, 40.736] as [number, number], // Fixed with tuple type
     directions: ["Head northeast from the main entrance", "Pass the giraffe enclosure", "The elephant arena will be ahead on your right"],
-    type: "event"
+    type: "event" as const
   },
   event2: {
     id: "event2",
     name: "Penguin Feeding",
     image: "public/lovable-uploads/385ec9d1-9804-48f9-95d9-e88ad31bedb7.png",
     distance: "12 Min",
-    coordinates: [-73.980, 40.733], // Example coordinates
+    coordinates: [-73.980, 40.733] as [number, number], // Fixed with tuple type
     directions: ["Head west from the main entrance", "Follow signs to the Aquatic Zone", "The penguin habitat is located inside the building"],
-    type: "event"
+    type: "event" as const
   }
 };
 
