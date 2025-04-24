@@ -1,11 +1,9 @@
-
 import { UserCircle, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import BottomNavbar from "../components/BottomNavbar";
 
 const ProfilePage = () => {
-  // In a real app, we would fetch this data from an API
   const user = {
     name: "Yaw Anderson",
     email: "yanderson@gmail.com",
@@ -17,6 +15,7 @@ const ProfilePage = () => {
       title: "Account",
       items: [
         { icon: "user-circle", label: "Edit profile", path: "/profile/edit" },
+        { icon: "heart", label: "Favorites", path: "/profile/favorites" },
         { icon: "shield", label: "Security", path: "/profile/security" },
         { icon: "bell", label: "Notifications", path: "/profile/notifications" },
         { icon: "lock", label: "Privacy", path: "/profile/privacy" },
@@ -56,7 +55,6 @@ const ProfilePage = () => {
                 >
                   <div className="flex items-center">
                     <div className="w-8 h-8 rounded-full bg-zoo-secondary flex items-center justify-center text-zoo-primary mr-3">
-                      {/* Icon placeholder - in a real app use the appropriate icon */}
                       <UserCircle className="w-5 h-5" />
                     </div>
                     <span>{item.label}</span>

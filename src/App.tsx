@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,8 +28,29 @@ import TermsPage from "./pages/TermsPage";
 import SecurityPage from "./pages/SecurityPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import PrivacyPage from "./pages/PrivacyPage";
+import FavoritesPage from "./pages/FavoritesPage";
 
 const queryClient = new QueryClient();
+
+const ProtectedAdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const adminStatus = localStorage.getItem("isAdmin");
+    setIsAdmin(adminStatus === "true");
+    
+    if (adminStatus !== "true") {
+      navigate("/auth");
+    }
+  }, [navigate]);
+
+  if (isAdmin === null) {
+    return <div>Loading...</div>;
+  }
+
+  return isAdmin ? <>{children}</> : null;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -47,6 +67,7 @@ const App = () => (
               <Route path="/visit-list" element={<VisitListPage />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/profile/favorites" element={<FavoritesPage />} />
               <Route path="/profile/edit" element={<EditProfilePage />} />
               <Route path="/profile/security" element={<SecurityPage />} />
               <Route path="/profile/notifications" element={<NotificationsPage />} />
@@ -55,7 +76,14 @@ const App = () => (
               <Route path="/events" element={<EventsPage />} />
               <Route path="/events/:id" element={<EventDetailPage />} />
               <Route path="/ar" element={<ARPage />} />
-              <Route path="/admin" element={<AdminPage />} />
+              <Route 
+                path="/admin" 
+                element={
+                  <ProtectedAdminRoute>
+                    <AdminPage />
+                  </ProtectedAdminRoute>
+                } 
+              />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/splash" element={<SplashPage />} />
               <Route path="/help" element={<HelpPage />} />
