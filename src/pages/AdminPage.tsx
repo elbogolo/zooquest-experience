@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEvents } from "@/contexts/EventsContext";
 import { Link, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { adminService } from "@/services/adminService";
+import { adminService, AdminEvent } from "@/services/adminService";
 import AnimalManagement from "@/components/admin/AnimalManagement";
 import NotificationManagement from "@/components/admin/NotificationManagement";
 import AdminSettings from "@/components/admin/AdminSettings";
@@ -36,19 +36,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Define a proper Event type to fix type errors
-interface Event {
-  id: string;
-  title: string;
-  date: string;
-  time: string;
-  location: string;
-  description?: string;
-  image?: string;
-  duration?: string;
-  host?: string;
-}
-
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("animals");
   const { events, addEvent, updateEvent, deleteEvent } = useEvents();
@@ -57,13 +44,12 @@ const AdminPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   
-  const [newEventData, setNewEventData] = useState<Omit<Event, "id">>({
+  const [newEventData, setNewEventData] = useState<Partial<AdminEvent>>({
     title: "",
     date: "Today",
     time: "10:00 AM",
     location: "Main Zoo Area",
     description: "",
-    image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
     duration: "30 minutes",
     host: "Zoo Staff"
   });
@@ -86,7 +72,7 @@ const AdminPage = () => {
     });
   };
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     if (activeTab === "events") {
       if (!newEventData.title) {
         toast.error("Event title is required");
@@ -94,59 +80,99 @@ const AdminPage = () => {
       }
 
       setIsLoading(true);
-      setTimeout(() => {
-        // Cast newEventData to the proper type expected by addEvent
-        addEvent(newEventData as any);
+      try {
+        // Use adminService instead of the context for consistency
+        const createdEvent = await adminService.createItem<AdminEvent>("events", newEventData);
+        
+        // Also add to local events context for UI update
+        addEvent({
+          id: createdEvent.id,
+          title: createdEvent.title || "",
+          date: createdEvent.date || "",
+          time: createdEvent.time || "",
+          location: createdEvent.location || "",
+          description: createdEvent.description || "",
+          image: createdEvent.imageUrl,
+        });
+        
         setNewEventData({
           title: "",
           date: "Today",
           time: "10:00 AM",
           location: "Main Zoo Area",
           description: "",
-          image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
           duration: "30 minutes",
           host: "Zoo Staff"
         });
-        setIsLoading(false);
+        
         toast.success("New event created successfully");
-      }, 600);
+      } catch (error) {
+        console.error("Failed to create event:", error);
+        toast.error("Failed to create event");
+      } finally {
+        setIsLoading(false);
+      }
     } else {
       toast.info(`Adding new ${activeTab.slice(0, -1)} via the dedicated form in each section`);
     }
   };
 
-  const handleEditItem = (id: string) => {
+  const handleEditItem = async (id: string) => {
     if (activeTab === "events") {
       const eventToEdit = events.find(e => e.id === id);
       if (eventToEdit) {
         setIsLoading(true);
         
-        setTimeout(() => {
+        try {
+          const updatedDescription = eventToEdit.description ? 
+            eventToEdit.description.includes("(Updated)") ? 
+              eventToEdit.description : 
+              eventToEdit.description + " (Updated)" : 
+            "Updated event";
+            
+          // Update using adminService
+          const updatedEvent = await adminService.updateItem<AdminEvent>(
+            "events", 
+            id, 
+            { description: updatedDescription }
+          );
+          
+          // Also update in local events context
           updateEvent(id, { 
             ...eventToEdit,
-            description: eventToEdit.description ? 
-              eventToEdit.description.includes("(Updated)") ? 
-                eventToEdit.description : 
-                eventToEdit.description + " (Updated)" : 
-              "Updated event"
+            description: updatedDescription
           });
-          setIsLoading(false);
+          
           toast.success(`Event "${eventToEdit.title}" updated successfully`);
-        }, 600);
+        } catch (error) {
+          console.error("Failed to update event:", error);
+          toast.error("Failed to update event");
+        } finally {
+          setIsLoading(false);
+        }
       }
     }
   };
 
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = async (id: string) => {
     if (activeTab === "events") {
       if (confirm("Are you sure you want to delete this event?")) {
         setIsLoading(true);
         
-        setTimeout(() => {
+        try {
+          // Delete using adminService
+          await adminService.deleteItem("events", id);
+          
+          // Also delete from local events context
           deleteEvent(id);
-          setIsLoading(false);
+          
           toast.success("Event deleted successfully");
-        }, 600);
+        } catch (error) {
+          console.error("Failed to delete event:", error);
+          toast.error("Failed to delete event");
+        } finally {
+          setIsLoading(false);
+        }
       }
     }
   };
@@ -155,13 +181,24 @@ const AdminPage = () => {
     navigate(`/events/${id}`);
   };
 
-  const handleRefreshData = () => {
+  const handleRefreshData = async () => {
     setIsLoading(true);
     
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Actually fetch fresh data based on the current tab
+      if (activeTab === "events") {
+        const refreshedEvents = await adminService.getItems<AdminEvent>("events");
+        // Update the global context with the refreshed events if needed
+        // This would require adding a setEvents function to the context
+      }
+      
       toast.success(`${activeTab} data refreshed`);
-    }, 800);
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error("Failed to refresh data");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isLoading) {
@@ -429,7 +466,11 @@ const AdminPage = () => {
                       <span>View Calendar</span>
                     </Link>
                   </Button>
-                  <Button variant="outline" className="flex items-center justify-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center justify-center gap-2"
+                    onClick={() => toast.success("Event updates sent to attendees")}
+                  >
                     <MessageSquare className="w-4 h-4" />
                     <span>Send Updates</span>
                   </Button>

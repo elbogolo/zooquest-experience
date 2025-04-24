@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Edit, Trash2, Image, FileText, RefreshCw, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { adminService, AdminAnimal } from "@/services/adminService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AnimalManagementProps {
   searchQuery: string;
@@ -24,6 +25,8 @@ interface AnimalManagementProps {
 const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) => {
   const [animals, setAnimals] = useState<AdminAnimal[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedAnimal, setSelectedAnimal] = useState<AdminAnimal | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [newAnimal, setNewAnimal] = useState<Partial<AdminAnimal>>({
     name: "",
     species: "",
@@ -134,13 +137,51 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
     }
   };
 
-  const handleUploadImage = () => {
-    // In a real app, this would open a file picker
-    toast.info("Image upload functionality would open here");
+  const handleUploadImage = (id: string) => {
+    setSelectedAnimal(animals.find(a => a.id === id) || null);
+    // Trigger file input click
+    setTimeout(() => {
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
+    }, 100);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedAnimal || !e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    setLoading(true);
+    
+    try {
+      const imageUrl = await adminService.uploadImage(file, "animals", selectedAnimal.id);
+      
+      // Update the animal with the new image URL
+      const updatedAnimal = await adminService.updateItem<AdminAnimal>(
+        "animals",
+        selectedAnimal.id,
+        { imageUrl }
+      );
+      
+      setAnimals(animals.map(a => a.id === selectedAnimal.id ? updatedAnimal : a));
+      toast.success(`Image for ${selectedAnimal.name} uploaded successfully`);
+    } catch (error) {
+      toast.error("Failed to upload image");
+      console.error(error);
+    } finally {
+      setLoading(false);
+      setSelectedAnimal(null);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const openHealthReportDialog = (animalId: string) => {
     setSelectedAnimalId(animalId);
+    const animal = animals.find(a => a.id === animalId);
+    
     setHealthReport({
       animalId,
       veterinarian: "",
@@ -273,7 +314,20 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
             ) : (
               getFilteredAnimals().map((animal) => (
                 <TableRow key={animal.id}>
-                  <TableCell className="font-medium">{animal.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {animal.imageUrl && (
+                        <div className="w-8 h-8 rounded-full overflow-hidden">
+                          <img 
+                            src={animal.imageUrl} 
+                            alt={animal.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      {animal.name}
+                    </div>
+                  </TableCell>
                   <TableCell>{animal.location}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs ${
@@ -292,9 +346,26 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
                       <Button 
                         variant="ghost" 
                         size="sm"
+                        onClick={() => openHealthReportDialog(animal.id)}
+                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <FileText className="h-4 w-4" />
+                        <span className="sr-only">Health Report</span>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleUploadImage(animal.id)}
+                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                      >
+                        <Image className="h-4 w-4" />
+                        <span className="sr-only">Upload Image</span>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
                         onClick={() => handleEditAnimal(animal.id)}
                         className="h-8 w-8 p-0"
-                        disabled={loading}
                       >
                         <Edit className="h-4 w-4" />
                         <span className="sr-only">Edit</span>
@@ -304,7 +375,6 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
                         size="sm"
                         onClick={() => handleDeleteAnimal(animal.id)}
                         className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        disabled={loading}
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Delete</span>
@@ -318,13 +388,28 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
         </Table>
       </div>
       
+      {/* Hidden file input for image upload */}
+      <input 
+        type="file" 
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/*"
+        onChange={handleFileChange}
+      />
+      
       <div className="mt-4 border-t pt-4">
         <h3 className="font-medium mb-2">Quick Actions</h3>
         <div className="grid grid-cols-2 gap-2">
           <Button
             variant="outline"
             className="flex items-center justify-center gap-2"
-            onClick={handleUploadImage}
+            onClick={() => {
+              if (animals.length === 0) {
+                toast.error("Add animals first before uploading images");
+                return;
+              }
+              toast.info("Select an animal from the list to upload an image");
+            }}
           >
             <Image className="w-4 h-4" />
             <span>Upload Images</span>
@@ -334,6 +419,12 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
               <Button
                 variant="outline"
                 className="flex items-center justify-center gap-2"
+                onClick={() => {
+                  if (animals.length === 0) {
+                    toast.error("Add animals first before submitting health reports");
+                    return;
+                  }
+                }}
               >
                 <FileText className="w-4 h-4" />
                 <span>Health Reports</span>
@@ -409,6 +500,15 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
           </Dialog>
         </div>
       </div>
+      
+      {/* Display alert if no animals */}
+      {animals.length === 0 && !loading && (
+        <Alert className="mt-4">
+          <AlertDescription>
+            No animals added yet. Use the form above to add your first animal.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 };
