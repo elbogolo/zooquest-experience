@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 
 // Define comprehensive types for the admin service
@@ -144,7 +143,8 @@ export const adminService = {
       collection.push(newItem as any);
     }
     
-    return simulateAPI(newItem as T);
+    // Fix the TypeScript error by using a proper type assertion
+    return simulateAPI(newItem as unknown as T);
   },
   
   // Update an existing item
