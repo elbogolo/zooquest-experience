@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Users, 
@@ -58,7 +57,6 @@ const AdminPage = () => {
   useEffect(() => {
     setIsLoading(true);
     
-    // Fetch events from adminService when component mounts
     adminService.getItems<AdminEvent>("events")
       .then(fetchedEvents => {
         setAdminEvents(fetchedEvents);
@@ -90,13 +88,10 @@ const AdminPage = () => {
 
       setIsLoading(true);
       try {
-        // Use adminService to create the event
         const createdEvent = await adminService.createItem<AdminEvent>("events", newEventData);
         
-        // Update the admin events state
         setAdminEvents([...adminEvents, createdEvent]);
         
-        // Also add to local events context for UI update - remove the id to match the expected type
         addEvent({
           title: createdEvent.title || "",
           date: createdEvent.date || "",
@@ -144,17 +139,14 @@ const AdminPage = () => {
               eventToEdit.description + " (Updated)" : 
             "Updated event";
             
-          // Update using adminService
           const updatedEvent = await adminService.updateItem<AdminEvent>(
             "events", 
             id, 
             { description: updatedDescription }
           );
           
-          // Update local state
           setAdminEvents(adminEvents.map(e => e.id === id ? updatedEvent : e));
           
-          // Also update in events context if the event exists there
           const contextEvent = events.find(e => e.id === id);
           if (contextEvent) {
             updateEvent(id, { 
@@ -180,13 +172,10 @@ const AdminPage = () => {
         setIsLoading(true);
         
         try {
-          // Delete using adminService
           await adminService.deleteItem("events", id);
           
-          // Update local state
           setAdminEvents(adminEvents.filter(e => e.id !== id));
           
-          // Also delete from local events context if it exists there
           deleteEvent(id);
           
           toast.success("Event deleted successfully");
@@ -208,12 +197,10 @@ const AdminPage = () => {
     setIsLoading(true);
     
     try {
-      // Fetch fresh data based on the current tab
       if (activeTab === "events") {
         const refreshedEvents = await adminService.getItems<AdminEvent>("events");
         setAdminEvents(refreshedEvents);
       } else if (activeTab === "animals") {
-        // Trigger a refresh in the AnimalManagement component
         const animalManagementElement = document.getElementById('animal-management');
         if (animalManagementElement) {
           const refreshEvent = new CustomEvent('refreshAnimals');
@@ -331,7 +318,7 @@ const AdminPage = () => {
           </TabsList>
           
           <TabsContent value="animals" className="mt-0">
-            <AnimalManagement searchQuery={searchQuery} filterStatus={filterStatus} id="animal-management" />
+            <AnimalManagement searchQuery={searchQuery} filterStatus={filterStatus} />
           </TabsContent>
           
           <TabsContent value="events" className="mt-0">
