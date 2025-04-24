@@ -136,12 +136,15 @@ export const adminService = {
       id: `new-${Date.now()}`,
       ...data,
       createdAt: new Date().toISOString()
-    } as T;
+    };
     
-    // Add to mock database
-    mockData[type as keyof typeof mockData].push(newItem as any);
+    // Add to mock database - Fix the type error by checking if the collection is an array
+    const collection = mockData[type as keyof typeof mockData];
+    if (Array.isArray(collection)) {
+      collection.push(newItem as any);
+    }
     
-    return simulateAPI(newItem);
+    return simulateAPI(newItem as T);
   },
   
   // Update an existing item
@@ -339,10 +342,13 @@ export const adminService = {
   },
   
   updateSystemSettings: async (settings: Partial<AdminSystemSettings>): Promise<AdminSystemSettings> => {
-    mockData.systemSettings = {
+    // Using type assertion to fix the TypeScript error
+    const updatedSettings = {
       ...mockData.systemSettings,
       ...settings
-    };
+    } as typeof mockData.systemSettings;
+    
+    mockData.systemSettings = updatedSettings;
     
     toast.success("System settings updated");
     return simulateAPI(mockData.systemSettings);

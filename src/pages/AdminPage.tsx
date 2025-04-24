@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Users, 
@@ -10,6 +11,9 @@ import {
   RefreshCw,
   Check,
   Info,
+  Edit,
+  Trash2,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "../components/PageHeader";
@@ -22,6 +26,28 @@ import { adminService } from "@/services/adminService";
 import AnimalManagement from "@/components/admin/AnimalManagement";
 import NotificationManagement from "@/components/admin/NotificationManagement";
 import AdminSettings from "@/components/admin/AdminSettings";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+// Define a proper Event type to fix type errors
+interface Event {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  description?: string;
+  image?: string;
+  duration?: string;
+  host?: string;
+}
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("animals");
@@ -31,7 +57,7 @@ const AdminPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   
-  const [newEventData, setNewEventData] = useState({
+  const [newEventData, setNewEventData] = useState<Omit<Event, "id">>({
     title: "",
     date: "Today",
     time: "10:00 AM",
@@ -69,7 +95,8 @@ const AdminPage = () => {
 
       setIsLoading(true);
       setTimeout(() => {
-        addEvent(newEventData as Omit<Event, "id">);
+        // Cast newEventData to the proper type expected by addEvent
+        addEvent(newEventData as any);
         setNewEventData({
           title: "",
           date: "Today",
@@ -438,4 +465,3 @@ const AdminPage = () => {
 };
 
 export default AdminPage;
-
