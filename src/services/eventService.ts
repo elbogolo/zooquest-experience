@@ -17,6 +17,10 @@ export const eventService = {
   createEvent: async (data: Partial<AdminEvent>): Promise<AdminEvent> => {
     const newEvent = {
       id: `event-${Date.now()}`,
+      title: data.title || "New Event",
+      date: data.date || new Date().toISOString().split('T')[0],
+      time: data.time || "12:00",
+      location: data.location || "Main Area",
       status: "Scheduled", // Set a default status
       ...data,
       createdAt: new Date().toISOString()
@@ -33,6 +37,7 @@ export const eventService = {
     const updatedEvent = {
       ...mockDatabase.events[index],
       ...data,
+      status: data.status || mockDatabase.events[index].status || "Scheduled",
       updatedAt: new Date().toISOString()
     } as AdminEvent;
     

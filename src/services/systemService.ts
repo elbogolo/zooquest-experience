@@ -16,7 +16,9 @@ export const systemService = {
   updateSettings: async (settings: Partial<AdminSystemSettings>): Promise<AdminSystemSettings> => {
     const updatedSettings = {
       ...mockDatabase.systemSettings,
-      ...settings
+      ...settings,
+      // Ensure theme is one of the valid types
+      theme: settings.theme || mockDatabase.systemSettings.theme || "light"
     } as AdminSystemSettings;
     
     mockDatabase.systemSettings = updatedSettings;

@@ -18,7 +18,11 @@ export const notificationService = {
   createNotification: async (data: Partial<AdminNotification>): Promise<AdminNotification> => {
     const newNotification = {
       id: `notification-${Date.now()}`,
-      message: data.message || "", // Ensure message is provided
+      title: data.title || "New Notification",
+      status: data.status || "Draft",
+      recipients: data.recipients || "All Visitors",
+      date: data.date || new Date().toLocaleDateString(),
+      message: data.message || "", // Ensure message is not undefined
       ...data,
       createdAt: new Date().toISOString()
     } as AdminNotification;
@@ -34,6 +38,7 @@ export const notificationService = {
     const updatedNotification = {
       ...mockDatabase.notifications[index],
       ...data,
+      message: data.message !== undefined ? data.message : mockDatabase.notifications[index].message || "",
       updatedAt: new Date().toISOString()
     } as AdminNotification;
     
@@ -54,8 +59,11 @@ export const notificationService = {
     
     const updatedNotification = {
       ...notification,
-      message: notification.message || "", // Ensure message is not undefined
+      title: notification.title || "Untitled Notification",
       status: "Sent" as const,
+      recipients: notification.recipients || "All Visitors",
+      date: notification.date || new Date().toLocaleDateString(),
+      message: notification.message || "", // Ensure message is not undefined
       sentAt: new Date().toISOString()
     } as AdminNotification;
     
@@ -76,8 +84,11 @@ export const notificationService = {
     
     const scheduledNotification = {
       ...notification,
-      message: notification.message || "", // Ensure message is not undefined
+      title: notification.title || "Untitled Notification",
       status: "Scheduled" as const,
+      recipients: notification.recipients || "All Visitors",
+      date: notification.date || new Date().toLocaleDateString(),
+      message: notification.message || "", // Ensure message is not undefined
       scheduledTime: scheduledDate
     } as AdminNotification;
     

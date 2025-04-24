@@ -103,13 +103,22 @@ export const adminService = {
     mockDatabase[itemType].splice(index, 1);
     return simulateAPI(undefined);
   },
+};
 
-  // Include all the specific services
+// Export all services
+export * from "./animalService";
+export * from "./eventService";
+export * from "./notificationService";
+export * from "./systemService";
+export * from "@/types/admin";
+
+// Default export for backward compatibility
+const combinedService = {
+  ...adminService,
   ...animalService,
   ...eventService,
   ...notificationService,
   ...systemService
 };
 
-export * from "@/types/admin";
-export default adminService;
+export default combinedService;
