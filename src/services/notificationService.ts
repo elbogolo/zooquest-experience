@@ -18,6 +18,7 @@ export const notificationService = {
   createNotification: async (data: Partial<AdminNotification>): Promise<AdminNotification> => {
     const newNotification = {
       id: `notification-${Date.now()}`,
+      message: data.message || "", // Ensure message is provided
       ...data,
       createdAt: new Date().toISOString()
     } as AdminNotification;
@@ -53,9 +54,10 @@ export const notificationService = {
     
     const updatedNotification = {
       ...notification,
+      message: notification.message || "", // Ensure message is not undefined
       status: "Sent" as const,
       sentAt: new Date().toISOString()
-    };
+    } as AdminNotification;
     
     // Update in the collection if it exists
     const index = mockDatabase.notifications.findIndex(n => n.id === notification.id);
@@ -74,9 +76,10 @@ export const notificationService = {
     
     const scheduledNotification = {
       ...notification,
+      message: notification.message || "", // Ensure message is not undefined
       status: "Scheduled" as const,
       scheduledTime: scheduledDate
-    };
+    } as AdminNotification;
     
     const index = mockDatabase.notifications.findIndex(n => n.id === notification.id);
     if (index >= 0) {

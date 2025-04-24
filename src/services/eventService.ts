@@ -17,6 +17,7 @@ export const eventService = {
   createEvent: async (data: Partial<AdminEvent>): Promise<AdminEvent> => {
     const newEvent = {
       id: `event-${Date.now()}`,
+      status: "Scheduled", // Set a default status
       ...data,
       createdAt: new Date().toISOString()
     } as AdminEvent;

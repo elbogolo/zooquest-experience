@@ -8,6 +8,11 @@ export const systemService = {
     return simulateAPI(mockDatabase.systemSettings);
   },
 
+  // Add alias for backward compatibility
+  getSystemSettings: async (): Promise<AdminSystemSettings> => {
+    return simulateAPI(mockDatabase.systemSettings);
+  },
+
   updateSettings: async (settings: Partial<AdminSystemSettings>): Promise<AdminSystemSettings> => {
     const updatedSettings = {
       ...mockDatabase.systemSettings,
@@ -17,6 +22,11 @@ export const systemService = {
     mockDatabase.systemSettings = updatedSettings;
     toast.success("System settings updated");
     return simulateAPI(updatedSettings);
+  },
+
+  // Add alias for backward compatibility
+  updateSystemSettings: async (settings: Partial<AdminSystemSettings>): Promise<AdminSystemSettings> => {
+    return systemService.updateSettings(settings);
   },
 
   backupData: async (): Promise<boolean> => {
