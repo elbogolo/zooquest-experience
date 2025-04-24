@@ -43,6 +43,7 @@ const AdminPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [adminEvents, setAdminEvents] = useState<AdminEvent[]>([]);
   
   const [newEventData, setNewEventData] = useState<Partial<AdminEvent>>({
     title: "",
@@ -57,18 +58,26 @@ const AdminPage = () => {
   useEffect(() => {
     setIsLoading(true);
     
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-      toast.success("Admin panel data loaded successfully");
-    }, 800);
-    
-    return () => clearTimeout(timeoutId);
+    // Fetch events from adminService when component mounts
+    adminService.getItems<AdminEvent>("events")
+      .then(fetchedEvents => {
+        setAdminEvents(fetchedEvents);
+        setIsLoading(false);
+        toast.success("Admin panel data loaded successfully");
+      })
+      .catch(error => {
+        console.error("Failed to load events:", error);
+        toast.error("Failed to load event data");
+        setIsLoading(false);
+      });
   }, []);
 
   const getFilteredEvents = () => {
-    return events.filter(event => {
+    return adminEvents.filter(event => {
       const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesSearch;
+      const matchesFilter = filterStatus === 'all' || 
+        (event.status?.toLowerCase() === filterStatus.toLowerCase());
+      return matchesSearch && (filterStatus === 'all' || matchesFilter);
     });
   };
 
@@ -81,8 +90,11 @@ const AdminPage = () => {
 
       setIsLoading(true);
       try {
-        // Use adminService instead of the context for consistency
+        // Use adminService to create the event
         const createdEvent = await adminService.createItem<AdminEvent>("events", newEventData);
+        
+        // Update the admin events state
+        setAdminEvents([...adminEvents, createdEvent]);
         
         // Also add to local events context for UI update - remove the id to match the expected type
         addEvent({
@@ -121,7 +133,7 @@ const AdminPage = () => {
 
   const handleEditItem = async (id: string) => {
     if (activeTab === "events") {
-      const eventToEdit = events.find(e => e.id === id);
+      const eventToEdit = adminEvents.find(e => e.id === id);
       if (eventToEdit) {
         setIsLoading(true);
         
@@ -139,11 +151,17 @@ const AdminPage = () => {
             { description: updatedDescription }
           );
           
-          // Also update in local events context
-          updateEvent(id, { 
-            ...eventToEdit,
-            description: updatedDescription
-          });
+          // Update local state
+          setAdminEvents(adminEvents.map(e => e.id === id ? updatedEvent : e));
+          
+          // Also update in events context if the event exists there
+          const contextEvent = events.find(e => e.id === id);
+          if (contextEvent) {
+            updateEvent(id, { 
+              ...contextEvent,
+              description: updatedDescription
+            });
+          }
           
           toast.success(`Event "${eventToEdit.title}" updated successfully`);
         } catch (error) {
@@ -165,7 +183,10 @@ const AdminPage = () => {
           // Delete using adminService
           await adminService.deleteItem("events", id);
           
-          // Also delete from local events context
+          // Update local state
+          setAdminEvents(adminEvents.filter(e => e.id !== id));
+          
+          // Also delete from local events context if it exists there
           deleteEvent(id);
           
           toast.success("Event deleted successfully");
@@ -187,11 +208,17 @@ const AdminPage = () => {
     setIsLoading(true);
     
     try {
-      // Actually fetch fresh data based on the current tab
+      // Fetch fresh data based on the current tab
       if (activeTab === "events") {
         const refreshedEvents = await adminService.getItems<AdminEvent>("events");
-        // Update the global context with the refreshed events if needed
-        // This would require adding a setEvents function to the context
+        setAdminEvents(refreshedEvents);
+      } else if (activeTab === "animals") {
+        // Trigger a refresh in the AnimalManagement component
+        const animalManagementElement = document.getElementById('animal-management');
+        if (animalManagementElement) {
+          const refreshEvent = new CustomEvent('refreshAnimals');
+          animalManagementElement.dispatchEvent(refreshEvent);
+        }
       }
       
       toast.success(`${activeTab} data refreshed`);
@@ -304,7 +331,7 @@ const AdminPage = () => {
           </TabsList>
           
           <TabsContent value="animals" className="mt-0">
-            <AnimalManagement searchQuery={searchQuery} filterStatus={filterStatus} />
+            <AnimalManagement searchQuery={searchQuery} filterStatus={filterStatus} id="animal-management" />
           </TabsContent>
           
           <TabsContent value="events" className="mt-0">
@@ -417,44 +444,52 @@ const AdminPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {getFilteredEvents().map((event) => (
-                      <TableRow key={event.id}>
-                        <TableCell className="font-medium">{event.title}</TableCell>
-                        <TableCell>{event.date} at {event.time}</TableCell>
-                        <TableCell>{event.location}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleViewEvent(event.id)}
-                              className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                            >
-                              <Calendar className="h-4 w-4" />
-                              <span className="sr-only">View</span>
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleEditItem(event.id)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDeleteItem(event.id)}
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          </div>
+                    {getFilteredEvents().length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8">
+                          <p className="text-gray-500">No events found matching your criteria</p>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      getFilteredEvents().map((event) => (
+                        <TableRow key={event.id}>
+                          <TableCell className="font-medium">{event.title}</TableCell>
+                          <TableCell>{event.date} at {event.time}</TableCell>
+                          <TableCell>{event.location}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleViewEvent(event.id)}
+                                className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              >
+                                <Calendar className="h-4 w-4" />
+                                <span className="sr-only">View</span>
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleEditItem(event.id)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                                <span className="sr-only">Edit</span>
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleDeleteItem(event.id)}
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Delete</span>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>

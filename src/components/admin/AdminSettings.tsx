@@ -67,7 +67,7 @@ const AdminSettings = ({ searchQuery, filterStatus }: AdminSettingsProps) => {
     return staff.filter(member => {
       const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesFilter = filterStatus === 'all' || member.status.toLowerCase() === filterStatus.toLowerCase();
-      return matchesSearch && matchesFilter;
+      return matchesSearch && (filterStatus === 'all' || matchesFilter);
     });
   };
 
@@ -180,13 +180,21 @@ const AdminSettings = ({ searchQuery, filterStatus }: AdminSettingsProps) => {
                           <span className={`px-2 py-1 rounded-full text-xs ${
                             member.status === "Active" 
                               ? "bg-green-100 text-green-800" 
-                              : "bg-yellow-100 text-yellow-800"
+                              : member.status === "On Leave"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-gray-100 text-gray-800"
                           }`}>
                             {member.status}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="outline" size="sm">Manage</Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => toast.success(`Managing ${member.name}'s permissions`)}
+                          >
+                            Manage
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -222,14 +230,10 @@ const AdminSettings = ({ searchQuery, filterStatus }: AdminSettingsProps) => {
                 <Upload className="w-5 h-5 mr-2 text-gray-600" />
                 <span>Data Backups</span>
               </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  disabled={true}
-                >
-                  Last Backup: {new Date(systemSettings.lastBackupDate).toLocaleString()}
-                </Button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="text-sm text-gray-600">
+                  Last: {new Date(systemSettings.lastBackupDate).toLocaleString()}
+                </div>
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -247,7 +251,11 @@ const AdminSettings = ({ searchQuery, filterStatus }: AdminSettingsProps) => {
                 <span>Database Management</span>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => toast.success("Database management panel opened")}
+                >
                   Manage
                 </Button>
               </div>
@@ -259,7 +267,11 @@ const AdminSettings = ({ searchQuery, filterStatus }: AdminSettingsProps) => {
                 <span>Security Settings</span>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => toast.success("Security settings opened")}
+                >
                   Configure
                 </Button>
               </div>

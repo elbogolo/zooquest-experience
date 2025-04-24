@@ -68,16 +68,9 @@ const NotificationManagement = ({ searchQuery, filterStatus }: NotificationManag
       return;
     }
 
-    const notificationToCreate = {
-      ...newNotification,
-      id: `notification-${Date.now()}`, 
-      status: "Draft",
-      date: new Date().toLocaleDateString()
-    } as AdminNotification;
-
     setLoading(true);
     try {
-      const createdNotification = await adminService.createItem<AdminNotification>("notifications", notificationToCreate);
+      const createdNotification = await adminService.createItem<AdminNotification>("notifications", newNotification);
       setNotifications([...notifications, createdNotification]);
       setNewNotification({
         title: "",
@@ -141,9 +134,8 @@ const NotificationManagement = ({ searchQuery, filterStatus }: NotificationManag
 
     const notificationToSchedule = {
       ...newNotification,
-      id: `notification-${Date.now()}`,
       status: "Scheduled",
-      date: new Date().toLocaleDateString()
+      scheduledTime: scheduledDate
     } as AdminNotification;
 
     setLoading(true);
