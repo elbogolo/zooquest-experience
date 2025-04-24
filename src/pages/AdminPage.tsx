@@ -84,15 +84,17 @@ const AdminPage = () => {
         // Use adminService instead of the context for consistency
         const createdEvent = await adminService.createItem<AdminEvent>("events", newEventData);
         
-        // Also add to local events context for UI update
+        // Also add to local events context for UI update - remove the id to match the expected type
         addEvent({
-          id: createdEvent.id,
           title: createdEvent.title || "",
           date: createdEvent.date || "",
           time: createdEvent.time || "",
           location: createdEvent.location || "",
           description: createdEvent.description || "",
           image: createdEvent.imageUrl,
+          notificationEnabled: false,
+          duration: createdEvent.duration,
+          host: createdEvent.host,
         });
         
         setNewEventData({
