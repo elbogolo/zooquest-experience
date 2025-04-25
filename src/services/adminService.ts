@@ -4,7 +4,7 @@ import { eventService } from "./eventService";
 import { notificationService } from "./notificationService";
 import { systemService } from "./systemService";
 import { mockDatabase, simulateAPI } from "@/utils/adminUtils";
-import { AdminAnimal, AdminEvent, AdminNotification, AdminStaff } from "@/types/admin";
+import { AdminAnimal, AdminEvent, AdminNotification, AdminStaff, AdminHealthReport, AdminSystemSettings } from "@/types/admin";
 
 // Generic type for admin items
 type AdminItemsMap = {
@@ -103,6 +103,48 @@ export const adminService = {
     mockDatabase[itemType].splice(index, 1);
     return simulateAPI(undefined);
   },
+  
+  // Re-adding method references from systemService
+  getSystemSettings: systemService.getSettings,
+  updateSystemSettings: systemService.updateSettings,
+  backupData: systemService.backupData,
+  resetSystem: systemService.resetSystem,
+  uploadImage: systemService.uploadImage,
+  
+  // Re-adding method references from notificationService
+  sendNotification: notificationService.sendNotification,
+  scheduleNotification: notificationService.scheduleNotification,
+  
+  // Re-adding methods for health reports
+  createHealthReport: async (reportData: Partial<AdminHealthReport>): Promise<AdminHealthReport> => {
+    console.log("Creating health report:", reportData);
+    
+    const newReport = {
+      id: `report-${Date.now()}`,
+      date: new Date().toLocaleDateString(),
+      ...reportData,
+      createdAt: new Date().toISOString()
+    } as AdminHealthReport;
+    
+    // Update the animal's last checkup date
+    if (reportData.animalId) {
+      const animalIndex = mockDatabase.animals.findIndex(a => a.id === reportData.animalId);
+      if (animalIndex >= 0) {
+        mockDatabase.animals[animalIndex].lastCheckup = new Date().toLocaleDateString();
+        if (reportData.followUpDate) {
+          mockDatabase.animals[animalIndex].nextCheckup = reportData.followUpDate;
+        }
+      }
+    }
+    
+    // Add report to a reports collection if it exists
+    if (!mockDatabase.healthReports) {
+      mockDatabase.healthReports = [];
+    }
+    mockDatabase.healthReports.push(newReport);
+    
+    return simulateAPI(newReport);
+  }
 };
 
 // Export all services

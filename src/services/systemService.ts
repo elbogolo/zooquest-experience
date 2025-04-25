@@ -17,7 +17,9 @@ export const systemService = {
     const updatedSettings = {
       ...mockDatabase.systemSettings,
       ...settings,
-      // Ensure theme is one of the valid types
+      // Ensure theme is one of the valid types and all required fields are present
+      enableNotifications: settings.enableNotifications !== undefined ? settings.enableNotifications : mockDatabase.systemSettings.enableNotifications,
+      lastBackupDate: settings.lastBackupDate || mockDatabase.systemSettings.lastBackupDate,
       theme: settings.theme || mockDatabase.systemSettings.theme || "light"
     } as AdminSystemSettings;
     

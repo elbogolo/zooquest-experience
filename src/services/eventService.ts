@@ -21,10 +21,17 @@ export const eventService = {
       date: data.date || new Date().toISOString().split('T')[0],
       time: data.time || "12:00",
       location: data.location || "Main Area",
-      status: "Scheduled", // Set a default status
+      status: data.status || "Scheduled", // Ensure status is always provided
       ...data,
       createdAt: new Date().toISOString()
     } as AdminEvent;
+    
+    // Validation for required fields in the mock database structure
+    if (!newEvent.title) newEvent.title = "New Event";
+    if (!newEvent.date) newEvent.date = new Date().toISOString().split('T')[0];
+    if (!newEvent.time) newEvent.time = "12:00";
+    if (!newEvent.location) newEvent.location = "Main Area";
+    if (!newEvent.status) newEvent.status = "Scheduled";
     
     mockDatabase.events.push(newEvent);
     return simulateAPI(newEvent);
@@ -37,6 +44,11 @@ export const eventService = {
     const updatedEvent = {
       ...mockDatabase.events[index],
       ...data,
+      // Ensure required fields are present
+      title: data.title || mockDatabase.events[index].title || "Untitled Event",
+      date: data.date || mockDatabase.events[index].date || new Date().toISOString().split('T')[0],
+      time: data.time || mockDatabase.events[index].time || "12:00",
+      location: data.location || mockDatabase.events[index].location || "Main Area",
       status: data.status || mockDatabase.events[index].status || "Scheduled",
       updatedAt: new Date().toISOString()
     } as AdminEvent;
