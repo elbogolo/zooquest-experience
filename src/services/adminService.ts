@@ -132,7 +132,9 @@ export const adminService = {
       if (animalIndex >= 0) {
         mockDatabase.animals[animalIndex].lastCheckup = new Date().toLocaleDateString();
         if (reportData.followUpDate) {
-          mockDatabase.animals[animalIndex].nextCheckup = reportData.followUpDate;
+          // Check if the animal object has a nextCheckup property
+          const animal = mockDatabase.animals[animalIndex] as any;
+          animal.nextCheckup = reportData.followUpDate;
         }
       }
     }

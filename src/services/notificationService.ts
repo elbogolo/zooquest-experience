@@ -23,16 +23,11 @@ export const notificationService = {
       recipients: data.recipients || "All Visitors",
       date: data.date || new Date().toLocaleDateString(),
       message: data.message || "", // Ensure message is not undefined
-      ...data,
+      priority: data.priority,
+      sender: data.sender,
+      scheduledTime: data.scheduledTime,
       createdAt: new Date().toISOString()
     } as AdminNotification;
-    
-    // Make sure all required fields have default values
-    if (!newNotification.title) newNotification.title = "New Notification";
-    if (!newNotification.status) newNotification.status = "Draft";
-    if (!newNotification.recipients) newNotification.recipients = "All Visitors";
-    if (!newNotification.date) newNotification.date = new Date().toLocaleDateString();
-    if (newNotification.message === undefined) newNotification.message = "";
     
     mockDatabase.notifications.push(newNotification);
     return simulateAPI(newNotification);
@@ -66,18 +61,20 @@ export const notificationService = {
     return simulateAPI(undefined);
   },
 
-  sendNotification: async (notification: AdminNotification): Promise<AdminNotification> => {
+  sendNotification: async (notification: Partial<AdminNotification>): Promise<AdminNotification> => {
     console.log("Sending notification:", notification);
     
     // Ensure all required fields are set
     const updatedNotification = {
-      ...notification,
       id: notification.id || `notification-${Date.now()}`,
       title: notification.title || "Untitled Notification",
       status: "Sent" as const,
       recipients: notification.recipients || "All Visitors",
       date: notification.date || new Date().toLocaleDateString(),
-      message: notification.message !== undefined ? notification.message : "", // Ensure message is not undefined
+      message: notification.message || "", // Ensure message is not undefined
+      priority: notification.priority,
+      sender: notification.sender,
+      scheduledTime: notification.scheduledTime,
       sentAt: new Date().toISOString()
     } as AdminNotification;
     
@@ -93,18 +90,19 @@ export const notificationService = {
     return simulateAPI(updatedNotification);
   },
 
-  scheduleNotification: async (notification: AdminNotification, scheduledDate: string): Promise<AdminNotification> => {
+  scheduleNotification: async (notification: Partial<AdminNotification>, scheduledDate: string): Promise<AdminNotification> => {
     console.log("Scheduling notification:", notification, "for", scheduledDate);
     
     // Ensure all required fields are set
     const scheduledNotification = {
-      ...notification,
       id: notification.id || `notification-${Date.now()}`,
       title: notification.title || "Untitled Notification",
       status: "Scheduled" as const,
       recipients: notification.recipients || "All Visitors",
       date: notification.date || new Date().toLocaleDateString(),
-      message: notification.message !== undefined ? notification.message : "", // Ensure message is not undefined
+      message: notification.message || "", // Ensure message is not undefined
+      priority: notification.priority,
+      sender: notification.sender,
       scheduledTime: scheduledDate
     } as AdminNotification;
     

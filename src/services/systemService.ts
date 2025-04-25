@@ -17,11 +17,11 @@ export const systemService = {
     const updatedSettings = {
       ...mockDatabase.systemSettings,
       ...settings,
-      // Ensure theme is one of the valid types and all required fields are present
+      // Ensure all required fields are present with proper types
       enableNotifications: settings.enableNotifications !== undefined ? settings.enableNotifications : mockDatabase.systemSettings.enableNotifications,
       lastBackupDate: settings.lastBackupDate || mockDatabase.systemSettings.lastBackupDate,
-      theme: settings.theme || mockDatabase.systemSettings.theme || "light"
-    } as AdminSystemSettings;
+      theme: (settings.theme || mockDatabase.systemSettings.theme) as "light" | "dark" | "system"
+    };
     
     mockDatabase.systemSettings = updatedSettings;
     toast.success("System settings updated");
