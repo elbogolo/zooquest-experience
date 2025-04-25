@@ -16,18 +16,19 @@ export const notificationService = {
   },
 
   createNotification: async (data: Partial<AdminNotification>): Promise<AdminNotification> => {
-    const newNotification = {
+    // Ensure all required fields are present with default values
+    const newNotification: AdminNotification = {
       id: `notification-${Date.now()}`,
       title: data.title || "New Notification",
       status: data.status || "Draft",
       recipients: data.recipients || "All Visitors",
       date: data.date || new Date().toLocaleDateString(),
-      message: data.message || "", // Ensure message is not undefined
+      message: data.message || "", // Always provide a default message
       priority: data.priority,
       sender: data.sender,
       scheduledTime: data.scheduledTime,
       createdAt: new Date().toISOString()
-    } as AdminNotification;
+    };
     
     mockDatabase.notifications.push(newNotification);
     return simulateAPI(newNotification);
@@ -37,17 +38,18 @@ export const notificationService = {
     const index = mockDatabase.notifications.findIndex(n => n.id === id);
     if (index === -1) throw new Error(`Notification not found: ${id}`);
     
-    const updatedNotification = {
+    // Ensure all required fields are present with default values
+    const updatedNotification: AdminNotification = {
       ...mockDatabase.notifications[index],
       ...data,
-      // Ensure required fields
+      // Ensure required fields have values
       title: data.title || mockDatabase.notifications[index].title || "Untitled Notification",
       status: data.status || mockDatabase.notifications[index].status || "Draft",
       recipients: data.recipients || mockDatabase.notifications[index].recipients || "All Visitors",
       date: data.date || mockDatabase.notifications[index].date || new Date().toLocaleDateString(),
       message: data.message !== undefined ? data.message : (mockDatabase.notifications[index].message || ""),
       updatedAt: new Date().toISOString()
-    } as AdminNotification;
+    };
     
     mockDatabase.notifications[index] = updatedNotification;
     return simulateAPI(updatedNotification);
@@ -64,19 +66,19 @@ export const notificationService = {
   sendNotification: async (notification: Partial<AdminNotification>): Promise<AdminNotification> => {
     console.log("Sending notification:", notification);
     
-    // Ensure all required fields are set
-    const updatedNotification = {
+    // Ensure all required fields are present with default values
+    const updatedNotification: AdminNotification = {
       id: notification.id || `notification-${Date.now()}`,
       title: notification.title || "Untitled Notification",
-      status: "Sent" as const,
+      status: "Sent",
       recipients: notification.recipients || "All Visitors",
       date: notification.date || new Date().toLocaleDateString(),
-      message: notification.message || "", // Ensure message is not undefined
+      message: notification.message || "", // Always provide a default message
       priority: notification.priority,
       sender: notification.sender,
       scheduledTime: notification.scheduledTime,
       sentAt: new Date().toISOString()
-    } as AdminNotification;
+    };
     
     // Update in the collection if it exists
     const index = mockDatabase.notifications.findIndex(n => n.id === notification.id);
@@ -93,18 +95,18 @@ export const notificationService = {
   scheduleNotification: async (notification: Partial<AdminNotification>, scheduledDate: string): Promise<AdminNotification> => {
     console.log("Scheduling notification:", notification, "for", scheduledDate);
     
-    // Ensure all required fields are set
-    const scheduledNotification = {
+    // Ensure all required fields are present with default values
+    const scheduledNotification: AdminNotification = {
       id: notification.id || `notification-${Date.now()}`,
       title: notification.title || "Untitled Notification",
-      status: "Scheduled" as const,
+      status: "Scheduled",
       recipients: notification.recipients || "All Visitors",
       date: notification.date || new Date().toLocaleDateString(),
-      message: notification.message || "", // Ensure message is not undefined
+      message: notification.message || "", // Always provide a default message
       priority: notification.priority,
       sender: notification.sender,
       scheduledTime: scheduledDate
-    } as AdminNotification;
+    };
     
     const index = mockDatabase.notifications.findIndex(n => n.id === notification.id);
     if (index >= 0) {

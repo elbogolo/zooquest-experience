@@ -15,20 +15,21 @@ export const eventService = {
   },
 
   createEvent: async (data: Partial<AdminEvent>): Promise<AdminEvent> => {
-    const newEvent = {
+    // Ensure all required fields are present with default values
+    const newEvent: AdminEvent = {
       id: `event-${Date.now()}`,
       title: data.title || "New Event",
       date: data.date || new Date().toISOString().split('T')[0],
       time: data.time || "12:00",
       location: data.location || "Main Area",
-      status: data.status || "Scheduled", // Ensure status is always provided
-      description: data.description,
+      status: data.status || "Scheduled", // Always provide a default status
+      description: data.description || "",
       duration: data.duration,
       host: data.host,
       attendees: data.attendees,
       imageUrl: data.imageUrl,
       createdAt: new Date().toISOString()
-    } as AdminEvent;
+    };
     
     mockDatabase.events.push(newEvent);
     return simulateAPI(newEvent);
@@ -38,17 +39,18 @@ export const eventService = {
     const index = mockDatabase.events.findIndex(e => e.id === id);
     if (index === -1) throw new Error(`Event not found: ${id}`);
     
-    const updatedEvent = {
+    // Ensure all required fields are present with default values
+    const updatedEvent: AdminEvent = {
       ...mockDatabase.events[index],
       ...data,
-      // Ensure required fields are present
+      // Ensure required fields have values
       title: data.title || mockDatabase.events[index].title || "Untitled Event",
       date: data.date || mockDatabase.events[index].date || new Date().toISOString().split('T')[0],
       time: data.time || mockDatabase.events[index].time || "12:00",
       location: data.location || mockDatabase.events[index].location || "Main Area",
       status: data.status || mockDatabase.events[index].status || "Scheduled",
       updatedAt: new Date().toISOString()
-    } as AdminEvent;
+    };
     
     mockDatabase.events[index] = updatedEvent;
     return simulateAPI(updatedEvent);

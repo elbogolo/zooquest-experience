@@ -14,13 +14,16 @@ export const systemService = {
   },
 
   updateSettings: async (settings: Partial<AdminSystemSettings>): Promise<AdminSystemSettings> => {
-    const updatedSettings = {
+    // Define the updatedSettings explicitly with the correct type
+    const updatedSettings: AdminSystemSettings = {
       ...mockDatabase.systemSettings,
       ...settings,
       // Ensure all required fields are present with proper types
-      enableNotifications: settings.enableNotifications !== undefined ? settings.enableNotifications : mockDatabase.systemSettings.enableNotifications,
+      enableNotifications: settings.enableNotifications !== undefined 
+        ? settings.enableNotifications 
+        : mockDatabase.systemSettings.enableNotifications,
       lastBackupDate: settings.lastBackupDate || mockDatabase.systemSettings.lastBackupDate,
-      theme: (settings.theme || mockDatabase.systemSettings.theme) as "light" | "dark" | "system"
+      theme: settings.theme || mockDatabase.systemSettings.theme
     };
     
     mockDatabase.systemSettings = updatedSettings;
