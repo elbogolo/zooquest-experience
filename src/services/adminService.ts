@@ -71,7 +71,7 @@ export const adminService = {
       throw new Error(`Invalid item type: ${itemType}`);
     }
     
-    const index = (mockDatabase[itemType] as any[]).findIndex((item) => item.id === id);
+    const index = (mockDatabase[itemType] as Array<{ id: string }>).findIndex((item) => item.id === id);
     if (index === -1) {
       throw new Error(`${itemType} with ID ${id} not found`);
     }
@@ -82,7 +82,7 @@ export const adminService = {
       updatedAt: new Date().toISOString()
     } as unknown as T;
     
-    mockDatabase[itemType][index] = updatedItem as any;
+    mockDatabase[itemType][index] = updatedItem as unknown as typeof mockDatabase[typeof itemType][0];
     return simulateAPI(updatedItem);
   },
 
@@ -95,7 +95,7 @@ export const adminService = {
       throw new Error(`Invalid item type: ${itemType}`);
     }
     
-    const index = mockDatabase[itemType].findIndex((item: any) => item.id === id);
+    const index = mockDatabase[itemType].findIndex((item: { id: string }) => item.id === id);
     if (index === -1) {
       throw new Error(`${itemType} with ID ${id} not found`);
     }
@@ -133,7 +133,7 @@ export const adminService = {
         mockDatabase.animals[animalIndex].lastCheckup = new Date().toLocaleDateString();
         if (reportData.followUpDate) {
           // Check if the animal object has a nextCheckup property
-          const animal = mockDatabase.animals[animalIndex] as any;
+          const animal = mockDatabase.animals[animalIndex] as AdminAnimal;
           animal.nextCheckup = reportData.followUpDate;
         }
       }

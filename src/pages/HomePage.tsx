@@ -1,39 +1,39 @@
 
 import { useState, useEffect } from "react";
-import { Settings, Map as MapIcon, Calendar, Camera, Users, Bookmark } from "lucide-react";
+import { Map as MapIcon, Calendar, Camera, Users, Bookmark } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import AnimalCard from "../components/AnimalCard";
 import SearchBar from "../components/SearchBar";
 import BottomNavbar from "../components/BottomNavbar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import UserAvatar from "@/components/UserAvatar";
+import { useAuth } from "@/hooks/useAuth";
+import AppHeader from "@/components/AppHeader";
 
 // Sample data for animals
 const popularAnimals = [
   {
     id: "lion",
     name: "Lion",
-    image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
+    image: "lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
     isFavorite: true,
   },
   {
     id: "tiger",
     name: "Tiger",
-    image: "public/lovable-uploads/385ec9d1-9804-48f9-95d9-e88ad31bedb7.png",
-    isFavorite: false,
+    image: "lovable-uploads/385ec9d1-9804-48f9-95d9-e88ad31bedb7.png",
+    isFavorite: true,
   },
   {
     id: "gorilla",
     name: "Gorilla",
-    image: "public/lovable-uploads/4fe1f1a1-c3d6-477b-b486-5590bda76085.png",
+    image: "lovable-uploads/4fe1f1a1-c3d6-477b-b486-5590bda76085.png",
     isFavorite: false,
   },
   {
     id: "crocodile",
     name: "Crocodile",
-    image: "public/lovable-uploads/913b61a8-cf4c-4183-9809-0c617218d36c.png",
+    image: "lovable-uploads/913b61a8-cf4c-4183-9809-0c617218d36c.png",
     isFavorite: false,
   },
 ];
@@ -44,19 +44,19 @@ const allAnimals = [
   {
     id: "tortoise",
     name: "Tortoise",
-    image: "public/lovable-uploads/009a33ba-77b2-49a3-86ae-0586197bf4ab.png",
+    image: "lovable-uploads/009a33ba-77b2-49a3-86ae-0586197bf4ab.png",
     isFavorite: false,
   },
   {
     id: "peacock",
     name: "Peacock",
-    image: "public/lovable-uploads/d65de9b2-e507-4511-a47c-4962de992a26.png",
+    image: "lovable-uploads/d65de9b2-e507-4511-a47c-4962de992a26.png",
     isFavorite: false,
   },
   {
     id: "zebra",
     name: "Zebra",
-    image: "public/lovable-uploads/c0779203-cebe-4f61-be65-f8939ee46040.png",
+    image: "lovable-uploads/c0779203-cebe-4f61-be65-f8939ee46040.png",
     isFavorite: false,
   },
 ];
@@ -70,10 +70,9 @@ const todayEvents = [
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [greeting, setGreeting] = useState("");
-  const [name, setName] = useState("Guest");
   const [search, setSearch] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
   const [searchResults, setSearchResults] = useState<typeof allAnimals>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
@@ -84,14 +83,6 @@ const HomePage = () => {
     if (hour < 12) setGreeting("Good morning");
     else if (hour < 18) setGreeting("Good afternoon");
     else setGreeting("Good evening");
-
-    // In a real app, we would fetch the user's name from authentication
-    const storedName = localStorage.getItem("userName");
-    if (storedName) setName(storedName);
-    
-    // Check if user is admin (for demo purposes)
-    const adminStatus = localStorage.getItem("isAdmin");
-    setIsAdmin(adminStatus === "true");
     
     // Initialize favorites from localStorage or from the popularAnimals array
     const storedFavorites = localStorage.getItem("favorites");
@@ -150,23 +141,10 @@ const HomePage = () => {
   return (
     <div className="min-h-screen pb-20 bg-background">
       {/* Header */}
-      <header className="px-5 pt-12 pb-4 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center text-foreground">
-            {greeting}, {name} <span className="ml-1 text-2xl">👋</span>
-          </h1>
-          <p className="text-muted-foreground">Explore the Zoo</p>
-        </div>
-        <div className="flex gap-2 items-center">
-          <ThemeToggle />
-          <Link to="/settings" className="flex items-center justify-center">
-            <Settings className="w-6 h-6 text-foreground" />
-          </Link>
-          <Link to="/profile">
-            <UserAvatar size="sm" />
-          </Link>
-        </div>
-      </header>
+      <AppHeader 
+        greeting={greeting}
+        subtitle="Explore the Zoo"
+      />
 
       {/* Search */}
       <div className="px-5 mb-6">
@@ -213,7 +191,7 @@ const HomePage = () => {
               </div>
               <span className="text-xs text-center text-foreground">AR View</span>
             </Link>
-            {isAdmin ? (
+            {user?.isAdmin ? (
               <Link to="/admin" className="flex flex-col items-center">
                 <div className="w-14 h-14 rounded-full bg-zoo-secondary flex items-center justify-center mb-1">
                   <Users className="w-7 h-7 text-zoo-primary" />

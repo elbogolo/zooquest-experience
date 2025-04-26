@@ -52,10 +52,17 @@ const AnimalCard = ({
       } w-full`}
     >
       <img
-        src={image}
+        src={image || '/lovable-uploads/default-animal.jpg'}
         alt={name}
         className="w-full h-full object-cover"
         loading="lazy"
+        onError={(e) => {
+          // If image fails to load, set a default
+          const target = e.target as HTMLImageElement;
+          if (!target.src.includes('default-animal.jpg')) {
+            target.src = '/lovable-uploads/default-animal.jpg';
+          }
+        }}
       />
       
       <div className="absolute top-2 right-2 z-10">
@@ -93,7 +100,7 @@ const AnimalCard = ({
   }
 
   return (
-    <Link to={`/animals/${id}`}>
+    <Link to={`/animal/${id}`}>
       {cardContent}
     </Link>
   );

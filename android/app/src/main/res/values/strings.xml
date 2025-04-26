@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">zooquest-experience</string>
+    <string name="title_activity_main">zooquest-experience</string>
+    <string name="package_name">app.lovable.d86b7ae12aab484581780140b755e651</string>
+    <string name="custom_url_scheme">app.lovable.d86b7ae12aab484581780140b755e651</string>
+</resources>

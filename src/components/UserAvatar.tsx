@@ -8,13 +8,15 @@ interface UserAvatarProps {
   showFallback?: boolean;
   className?: string;
   linkToProfile?: boolean;
+  disableLink?: boolean; // To prevent nested anchor tags
 }
 
 const UserAvatar = ({ 
   size = "md", 
   showFallback = true, 
   className = "",
-  linkToProfile = true 
+  linkToProfile = true,
+  disableLink = false
 }: UserAvatarProps) => {
   // In a real app, we would fetch this from a user context/auth state
   const userName = localStorage.getItem("userName") || "Guest";
@@ -41,7 +43,7 @@ const UserAvatar = ({
     </Avatar>
   );
   
-  if (linkToProfile) {
+  if (linkToProfile && !disableLink) {
     return <Link to="/profile">{avatar}</Link>;
   }
   

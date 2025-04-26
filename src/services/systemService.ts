@@ -23,10 +23,11 @@ export const systemService = {
         ? settings.enableNotifications 
         : mockDatabase.systemSettings.enableNotifications,
       lastBackupDate: settings.lastBackupDate || mockDatabase.systemSettings.lastBackupDate,
-      theme: settings.theme || mockDatabase.systemSettings.theme
+      theme: (settings.theme || mockDatabase.systemSettings.theme) as "light" | "dark" | "system"
     };
     
-    mockDatabase.systemSettings = updatedSettings;
+    // Cast to match mockDatabase types
+    mockDatabase.systemSettings = updatedSettings as typeof mockDatabase.systemSettings;
     toast.success("System settings updated");
     return simulateAPI(updatedSettings);
   },
@@ -64,18 +65,33 @@ export const systemService = {
     // Simulate upload delay
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Mock URL for the "uploaded" image
-    const imageUrl = `mock-upload-url/${file.name}`;
-    
-    // Update the item with the new image URL
-    const collection = mockDatabase[type as keyof typeof mockDatabase] as any[];
-    const index = collection.findIndex(item => item.id === id);
-    
-    if (index >= 0) {
-      collection[index].imageUrl = imageUrl;
+    try {
+      // Generate a proper file URL that will work in the app
+      // In a real app, this would upload to a server or cloud storage
+      // For this mock implementation, we'll use public folder paths
+      
+      // Extract the file extension and create a sanitized filename
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const safeFileName = `${type}-${id}-${Date.now()}.${fileExt}`;
+      
+      // Create a URL that points to the public folder where images would be stored
+      // The public folder is accessible to the browser as a root path
+      const imageUrl = `/lovable-uploads/${safeFileName}`;
+      
+      // Update the item with the new image URL
+      const collection = mockDatabase[type as keyof typeof mockDatabase] as Array<{ id: string; imageUrl?: string }>;
+      const index = collection.findIndex(item => item.id === id);
+      
+      if (index >= 0) {
+        collection[index].imageUrl = imageUrl;
+      }
+      
+      toast.success(`Image uploaded successfully`);
+      return imageUrl;
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image');
+      throw new Error('Upload failed');
     }
-    
-    toast.success(`Image uploaded successfully`);
-    return imageUrl;
   }
 };

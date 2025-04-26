@@ -1,4 +1,3 @@
-
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
@@ -6,8 +5,7 @@ const config: CapacitorConfig = {
   appName: 'zooquest-experience',
   webDir: 'dist',
   server: {
-    url: 'https://d86b7ae1-2aab-4845-8178-0140b755e651.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+    androidScheme: 'https'
   },
   plugins: {
     SplashScreen: {

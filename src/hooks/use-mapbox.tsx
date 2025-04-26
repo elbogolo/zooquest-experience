@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -22,6 +22,13 @@ interface UseMapboxProps {
   locations: Record<string, MapLocation>;
 }
 
+// Type for a step in the directions
+type DirectionStep = {
+  instruction: string;
+  distance: number;
+  duration: number;
+};
+
 interface UseMapboxReturn {
   mapContainer: React.RefObject<HTMLDivElement>;
   isLoaded: boolean;
@@ -30,6 +37,11 @@ interface UseMapboxReturn {
   resetView: () => void;
   updateUserLocation: () => void;
   filterLocations: (type: 'all' | 'animal' | 'event' | 'facility') => void;
+  isLocating: boolean;
+  directions: DirectionStep[];
+  isRouteFetching: boolean;
+  routeDistance: string;
+  routeDuration: string;
 }
 
 export const useMapbox = ({
@@ -45,58 +57,80 @@ export const useMapbox = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [currentFilter, setCurrentFilter] = useState<'all' | 'animal' | 'event' | 'facility'>('all');
+  const [isLocating, setIsLocating] = useState(false);
+  const [directions, setDirections] = useState<DirectionStep[]>([]);
+  const [isRouteFetching, setIsRouteFetching] = useState(false);
+  const [routeDistance, setRouteDistance] = useState('0 m');
+  const [routeDuration, setRouteDuration] = useState('0 min');
   
   // User location (simulated for demo)
   const [userLocation, setUserLocation] = useState<[number, number]>([initialCenter[0] - 0.003, initialCenter[1] - 0.002]);
 
-  // Initialize map
-  useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+  // Function to select a location
+  const selectLocation = useCallback((locationId: string | null) => {
+    setSelectedLocation(locationId);
+  }, []);
 
-    const newMap = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v11',
-      center: initialCenter,
-      zoom: initialZoom,
-      pitch: 30,
-    });
-
-    // Add navigation controls
-    newMap.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
-
-    // Handle map load
-    newMap.on('load', () => {
-      map.current = newMap;
-      setIsLoaded(true);
-
-      // Add user marker
-      const userElement = document.createElement('div');
-      userElement.className = 'user-marker';
-      userElement.innerHTML = `
-        <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-lg animate-pulse">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-navigation text-white"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-        </div>
-        <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-white rounded-full border-2 border-blue-600"></div>
-      `;
+  // Mock function to fetch directions from Mapbox directions API
+  const fetchDirections = useCallback(async (start: [number, number], end: [number, number]) => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Generate intermediate points for a more realistic path
+    const pointCount = Math.floor(Math.random() * 3) + 2;
+    const points: [number, number][] = [start];
+    
+    for (let i = 1; i <= pointCount; i++) {
+      const fraction = i / (pointCount + 1);
+      const lat = start[1] + (end[1] - start[1]) * fraction;
+      const lng = start[0] + (end[0] - start[0]) * fraction;
       
-      userMarker.current = new mapboxgl.Marker({ element: userElement })
-        .setLngLat(userLocation)
-        .addTo(newMap);
-
-      // Add location markers
-      addMarkers();
-    });
-
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
+      // Add some randomness
+      const jitter = 0.0008 * (Math.random() - 0.5);
+      points.push([lng + jitter, lat + jitter]);
+    }
+    
+    points.push(end);
+    
+    // Create direction steps
+    const steps: DirectionStep[] = [];
+    const directions = [
+      'Head northwest on Zoo Main Path',
+      'Turn right at the gift shop',
+      'Continue past the food court',
+      'At the fountain, turn left',
+      'Follow signs for the animal exhibit',
+      'Turn right at the information booth',
+      'Continue straight ahead'
+    ];
+    
+    // Generate 3-5 random steps
+    const stepCount = Math.floor(Math.random() * 3) + 3;
+    for (let i = 0; i < stepCount; i++) {
+      steps.push({
+        instruction: directions[Math.floor(Math.random() * directions.length)],
+        distance: Math.floor(100 + Math.random() * 300),
+        duration: Math.floor(2 + Math.random() * 5)
+      });
+    }
+    
+    // Calculate total distance and duration
+    const totalDistance = steps.reduce((sum, step) => sum + step.distance, 0);
+    const totalDuration = steps.reduce((sum, step) => sum + step.duration, 0);
+    
+    return {
+      geometry: {
+        type: 'LineString' as const,
+        coordinates: points
+      },
+      steps,
+      distance: `${totalDistance} m`,
+      duration: `${totalDuration} min`
     };
   }, []);
 
   // Function to add location markers to the map
-  const addMarkers = () => {
+  const addMarkers = useCallback(() => {
     if (!map.current) return;
 
     // Clear existing markers
@@ -147,14 +181,14 @@ export const useMapbox = ({
         selectLocation(id);
       });
     });
-  };
+  }, [map, locations, currentFilter, selectedLocation, selectLocation]);
 
   // Update markers when filter changes
   useEffect(() => {
     if (isLoaded) {
       addMarkers();
     }
-  }, [currentFilter, isLoaded, selectedLocation]);
+  }, [isLoaded, addMarkers]);
 
   // Draw path between user and selected location
   useEffect(() => {
@@ -172,56 +206,112 @@ export const useMapbox = ({
       const destination = locations[selectedLocation];
       if (!destination) return;
 
-      // Add path to map
-      map.current.addSource('route', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              userLocation,
-              destination.coordinates as [number, number]
-            ]
+      // Fetch directions from Mapbox API (simulation for demo)
+      setIsRouteFetching(true);
+      fetchDirections(userLocation, destination.coordinates as [number, number])
+        .then(routeData => {
+          if (!map.current) return;
+
+          // Add route to map
+          if (routeData.geometry) {
+            map.current.addSource('route', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: routeData.geometry
+              }
+            });
+
+            map.current.addLayer({
+              id: 'route',
+              type: 'line',
+              source: 'route',
+              layout: {
+                'line-join': 'round',
+                'line-cap': 'round'
+              },
+              paint: {
+                'line-color': '#4FD1C5',
+                'line-width': 3,
+                'line-dasharray': [0.5, 1]
+              }
+            });
+
+            // Set directions, distance and duration
+            setDirections(routeData.steps);
+            setRouteDistance(routeData.distance);
+            setRouteDuration(routeData.duration);
+          } else {
+            // Fallback to simple route if directions API fails
+            map.current.addSource('route', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: [
+                    userLocation,
+                    destination.coordinates as [number, number]
+                  ]
+                }
+              }
+            });
+
+            map.current.addLayer({
+              id: 'route',
+              type: 'line',
+              source: 'route',
+              layout: {
+                'line-join': 'round',
+                'line-cap': 'round'
+              },
+              paint: {
+                'line-color': '#4FD1C5',
+                'line-width': 3,
+                'line-dasharray': [2, 2]
+              }
+            });
+
+            // Generate simulated directions
+            setDirections([
+              ...destination.directions.map((instruction, i) => ({
+                instruction,
+                distance: Math.floor(100 + Math.random() * 300),
+                duration: Math.floor(2 + Math.random() * 5)
+              }))
+            ]);
+            setRouteDistance(`${Math.floor(Math.random() * 500 + 200)} m`);
+            setRouteDuration(`${Math.floor(Math.random() * 10 + 5)} min`);
           }
-        }
-      });
 
-      map.current.addLayer({
-        id: 'route',
-        type: 'line',
-        source: 'route',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': '#4FD1C5',
-          'line-width': 3,
-          'line-dasharray': [2, 2]
-        }
-      });
+          // Move camera to show both points
+          const bounds = new mapboxgl.LngLatBounds()
+            .extend(userLocation)
+            .extend(destination.coordinates as [number, number]);
 
-      // Move camera to show both points
-      const bounds = new mapboxgl.LngLatBounds()
-        .extend(userLocation)
-        .extend(destination.coordinates as [number, number]);
+          map.current.fitBounds(bounds, {
+            padding: 100,
+            duration: 1000
+          });
 
-      map.current.fitBounds(bounds, {
-        padding: 100,
-        duration: 1000
-      });
+          setIsRouteFetching(false);
+        })
+        .catch(error => {
+          console.error('Error fetching directions:', error);
+          setIsRouteFetching(false);
+        });
+    } else {
+      // Clear directions when no location is selected
+      setDirections([]);
+      setRouteDistance('0 m');
+      setRouteDuration('0 min');
     }
-  }, [selectedLocation, isLoaded, userLocation]);
-
-  // Function to select a location
-  const selectLocation = (locationId: string | null) => {
-    setSelectedLocation(locationId);
-  };
+  }, [selectedLocation, isLoaded, userLocation, locations, map, fetchDirections]);
 
   // Function to reset the map view
-  const resetView = () => {
+  const resetView = useCallback(() => {
     if (!map.current) return;
     
     // Clear selected location
@@ -234,42 +324,50 @@ export const useMapbox = ({
       pitch: 30,
       duration: 1000
     });
-  };
+  }, [map, initialCenter, initialZoom]);
+
+
 
   // Function to update user location (simulated)
-  const updateUserLocation = () => {
+  const updateUserLocation = useCallback(() => {
     if (!map.current || !userMarker.current) return;
     
-    // Generate a slightly randomized location
-    const newLocation: [number, number] = [
-      userLocation[0] + (Math.random() * 0.001 - 0.0005),
-      userLocation[1] + (Math.random() * 0.001 - 0.0005)
-    ];
+    setIsLocating(true);
     
-    setUserLocation(newLocation);
-    userMarker.current.setLngLat(newLocation);
-
-    // Update path if a location is selected
-    if (selectedLocation && map.current.getSource('route')) {
-      const destination = locations[selectedLocation];
-      (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: [
-            newLocation,
-            destination.coordinates as [number, number]
-          ]
-        }
+    // Simulate geolocation delay
+    setTimeout(() => {
+      // Generate a slightly randomized location
+      const newLocation: [number, number] = [
+        userLocation[0] + (Math.random() * 0.001 - 0.0005),
+        userLocation[1] + (Math.random() * 0.001 - 0.0005)
+      ];
+      
+      setUserLocation(newLocation);
+      userMarker.current?.setLngLat(newLocation);
+      
+      // Fly to the user's location
+      map.current?.flyTo({
+        center: newLocation,
+        zoom: 17,
+        duration: 1000
       });
-    }
-  };
+      
+      // Update route if a location is selected
+      if (selectedLocation) {
+        // Trigger the effect to recalculate the route
+        const currentSelected = selectedLocation;
+        setSelectedLocation(null);
+        setTimeout(() => setSelectedLocation(currentSelected), 50);
+      }
+      
+      setIsLocating(false);
+    }, 1500);
+  }, [map, userMarker, userLocation, selectedLocation, setSelectedLocation]);
 
   // Function to filter locations by type
-  const filterLocations = (type: 'all' | 'animal' | 'event' | 'facility') => {
+  const filterLocations = useCallback((type: 'all' | 'animal' | 'event' | 'facility') => {
     setCurrentFilter(type);
-  };
+  }, [setCurrentFilter]);
 
   return {
     mapContainer,
@@ -278,6 +376,11 @@ export const useMapbox = ({
     selectedLocation,
     resetView,
     updateUserLocation,
-    filterLocations
+    filterLocations,
+    isLocating,
+    directions,
+    isRouteFetching,
+    routeDistance,
+    routeDuration
   };
 };

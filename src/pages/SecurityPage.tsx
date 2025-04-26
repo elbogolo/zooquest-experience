@@ -57,7 +57,7 @@ const SecurityPage = () => {
       <PageHeader title="Security" showBackButton showThemeToggle />
       
       <div className="pt-16 px-5 space-y-6">
-        <div className="bg-card rounded-xl overflow-hidden shadow-sm p-4">
+        <div className="bg-card dark:bg-card rounded-xl overflow-hidden shadow-sm border border-border p-4">
           <h2 className="text-lg font-semibold mb-4 flex items-center">
             <Shield className="w-5 h-5 mr-2 text-primary" />
             Password Settings
@@ -65,7 +65,7 @@ const SecurityPage = () => {
           
           <div className="space-y-4">
             <div>
-              <label htmlFor="current-password" className="block text-sm font-medium mb-1">
+              <label htmlFor="current-password" className="block text-sm font-medium mb-2 text-foreground">
                 Current Password
               </label>
               <div className="relative">
@@ -74,7 +74,7 @@ const SecurityPage = () => {
                   id="current-password"
                   value={password}
                   readOnly
-                  className="zoo-text-field pr-10"
+                  className="w-full px-4 py-3 rounded-md border border-border bg-card dark:bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors pr-10"
                 />
                 <button 
                   onClick={handleTogglePasswordVisibility}
@@ -86,7 +86,7 @@ const SecurityPage = () => {
             </div>
             
             <div>
-              <label htmlFor="new-password" className="block text-sm font-medium mb-1">
+              <label htmlFor="new-password" className="block text-sm font-medium mb-2 text-foreground">
                 New Password
               </label>
               <input
@@ -94,13 +94,13 @@ const SecurityPage = () => {
                 id="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="zoo-text-field"
+                className="w-full px-4 py-3 rounded-md border border-border bg-card dark:bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
                 placeholder="Enter new password"
               />
             </div>
             
             <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium mb-1">
+              <label htmlFor="confirm-password" className="block text-sm font-medium mb-2 text-foreground">
                 Confirm New Password
               </label>
               <input
@@ -108,14 +108,14 @@ const SecurityPage = () => {
                 id="confirm-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="zoo-text-field"
+                className="w-full px-4 py-3 rounded-md border border-border bg-card dark:bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
                 placeholder="Confirm new password"
               />
             </div>
             
             <Button 
               onClick={handleSavePassword} 
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 py-6 text-base font-medium"
             >
               <Save className="w-4 h-4" />
               Update Password
@@ -123,7 +123,7 @@ const SecurityPage = () => {
           </div>
         </div>
         
-        <div className="bg-card rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-card dark:bg-card rounded-xl overflow-hidden shadow-sm border border-border">
           <h2 className="text-lg font-semibold p-4 flex items-center">
             <Shield className="w-5 h-5 mr-2 text-primary" />
             Security Options
@@ -132,7 +132,7 @@ const SecurityPage = () => {
           <div className="divide-y divide-border">
             <div className="flex items-center justify-between p-4">
               <div>
-                <h3 className="text-sm font-medium">Two-Factor Authentication</h3>
+                <h3 className="text-sm font-medium text-foreground">Two-Factor Authentication</h3>
                 <p className="text-xs text-muted-foreground mt-1">
                   Add an extra layer of security to your account
                 </p>
@@ -145,7 +145,7 @@ const SecurityPage = () => {
             
             <div className="flex items-center justify-between p-4">
               <div>
-                <h3 className="text-sm font-medium">Login Alerts</h3>
+                <h3 className="text-sm font-medium text-foreground">Login Alerts</h3>
                 <p className="text-xs text-muted-foreground mt-1">
                   Get notified when someone logs into your account
                 </p>

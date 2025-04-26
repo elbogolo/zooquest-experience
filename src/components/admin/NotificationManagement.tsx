@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Bell, Edit, Trash2, Send, Calendar, RefreshCw } from "lucide-react";
+import { Bell, Edit, Trash2, Send, Calendar, RefreshCw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,10 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { adminService, AdminNotification } from "@/services/adminService";
+import { Badge } from "@/components/ui/badge";
+import { AdminNotification } from "@/types/admin";
+import { notificationService } from "@/services/notificationService";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface NotificationManagementProps {
   searchQuery: string;
@@ -28,9 +31,12 @@ const NotificationManagement = ({ searchQuery, filterStatus }: NotificationManag
     message: "",
     recipients: "All visitors",
     status: "Draft",
-    date: new Date().toLocaleDateString()
+    date: new Date().toLocaleDateString(),
+    priority: "Medium"
   });
   const [scheduledDate, setScheduledDate] = useState("");
+
+  const { refetchNotifications: refreshUserNotifications } = useNotifications();
 
   useEffect(() => {
     fetchNotifications();
@@ -39,7 +45,7 @@ const NotificationManagement = ({ searchQuery, filterStatus }: NotificationManag
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const data = await adminService.getItems<AdminNotification>("notifications");
+      const data = await notificationService.getNotifications();
       setNotifications(data);
     } catch (error) {
       toast.error("Failed to load notifications");
@@ -70,14 +76,20 @@ const NotificationManagement = ({ searchQuery, filterStatus }: NotificationManag
 
     setLoading(true);
     try {
-      const createdNotification = await adminService.createItem<AdminNotification>("notifications", newNotification);
+      const notificationData = {
+        ...newNotification,
+        id: crypto.randomUUID().substring(0, 8),
+        status: "Draft" as "Draft" | "Scheduled" | "Sent" | "Cancelled"
+      };
+      const createdNotification = await notificationService.createNotification(notificationData);
       setNotifications([...notifications, createdNotification]);
       setNewNotification({
         title: "",
         message: "",
         recipients: "All visitors",
         status: "Draft",
-        date: new Date().toLocaleDateString()
+        date: new Date().toLocaleDateString(),
+        priority: "Medium"
       });
       toast.success("Notification saved as draft");
     } catch (error) {
@@ -94,23 +106,32 @@ const NotificationManagement = ({ searchQuery, filterStatus }: NotificationManag
       return;
     }
 
-    const notificationToSend = {
+    const notificationData = {
       ...newNotification,
-      id: `notification-${Date.now()}`,
-      status: "Sent",
+      id: crypto.randomUUID().substring(0, 8),
+      status: "Draft" as "Draft" | "Scheduled" | "Sent" | "Cancelled",
       date: new Date().toLocaleDateString()
-    } as AdminNotification;
+    };
 
     setLoading(true);
     try {
-      const sentNotification = await adminService.sendNotification(notificationToSend);
-      setNotifications([...notifications, sentNotification]);
+      // First create the notification as a draft
+      const createdNotification = await notificationService.createNotification(notificationData);
+      
+      // Then send it
+      const sentNotification = await notificationService.sendNotification(createdNotification.id);
+      setNotifications([...notifications.filter(n => n.id !== createdNotification.id), sentNotification]);
+      
+      // Refresh user notifications to show the new one
+      refreshUserNotifications();
+      
       setNewNotification({
         title: "",
         message: "",
         recipients: "All visitors",
         status: "Draft",
-        date: new Date().toLocaleDateString()
+        date: new Date().toLocaleDateString(),
+        priority: "Medium"
       });
       toast.success("Notification sent successfully");
     } catch (error) {
@@ -132,22 +153,29 @@ const NotificationManagement = ({ searchQuery, filterStatus }: NotificationManag
       return;
     }
 
-    const notificationToSchedule = {
+    const notificationData = {
       ...newNotification,
-      status: "Scheduled",
+      id: crypto.randomUUID().substring(0, 8),
+      status: "Draft" as "Draft" | "Scheduled" | "Sent" | "Cancelled",
       scheduledTime: scheduledDate
-    } as AdminNotification;
+    };
 
     setLoading(true);
     try {
-      const scheduledNotification = await adminService.scheduleNotification(notificationToSchedule, scheduledDate);
-      setNotifications([...notifications, scheduledNotification]);
+      // First create the notification as a draft
+      const createdNotification = await notificationService.createNotification(notificationData);
+      
+      // Then schedule it
+      const scheduledNotification = await notificationService.scheduleNotification(createdNotification.id, new Date(scheduledDate));
+      setNotifications([...notifications.filter(n => n.id !== createdNotification.id), scheduledNotification]);
+      
       setNewNotification({
         title: "",
         message: "",
         recipients: "All visitors",
         status: "Draft",
-        date: new Date().toLocaleDateString()
+        date: new Date().toLocaleDateString(),
+        priority: "Medium"
       });
       setScheduledDate("");
       toast.success(`Notification scheduled for ${scheduledDate}`);
@@ -169,14 +197,23 @@ const NotificationManagement = ({ searchQuery, filterStatus }: NotificationManag
     
     setLoading(true);
     try {
-      const updatedNotification = await adminService.updateItem<AdminNotification>(
-        "notifications", 
+      const updatedNotification = await notificationService.updateNotification(
         id, 
-        { title: updatedTitle }
+        { 
+          title: updatedTitle,
+          status: notificationToEdit.status,
+          recipients: notificationToEdit.recipients,
+          date: notificationToEdit.date
+        }
       );
       
       setNotifications(notifications.map(n => n.id === id ? updatedNotification : n));
       toast.success("Notification updated successfully");
+      
+      // Refresh user notifications if this was a sent notification
+      if (notificationToEdit.status === "Sent") {
+        refreshUserNotifications();
+      }
     } catch (error) {
       toast.error("Failed to update notification");
       console.error(error);
@@ -189,9 +226,12 @@ const NotificationManagement = ({ searchQuery, filterStatus }: NotificationManag
     if (confirm("Are you sure you want to delete this notification?")) {
       setLoading(true);
       try {
-        await adminService.deleteItem("notifications", id);
+        await notificationService.deleteNotification(id);
         setNotifications(notifications.filter(n => n.id !== id));
         toast.success("Notification deleted successfully");
+        
+        // Refresh user notifications to make sure deleted ones are removed
+        refreshUserNotifications();
       } catch (error) {
         toast.error("Failed to delete notification");
         console.error(error);
@@ -246,12 +286,25 @@ const NotificationManagement = ({ searchQuery, filterStatus }: NotificationManag
                         ? "bg-green-100 text-green-800" 
                         : notification.status === "Scheduled"
                         ? "bg-blue-100 text-blue-800"
+                        : notification.status === "Cancelled"
+                        ? "bg-red-100 text-red-800"
                         : "bg-gray-100 text-gray-800"
                     }`}>
                       {notification.status}
                     </span>
                   </TableCell>
-                  <TableCell>{notification.date}</TableCell>
+                  <TableCell className="flex flex-col">
+                  <span>{notification.date}</span>
+                  {notification.priority && (
+                    <Badge variant={notification.priority === "High" ? "destructive" : 
+                                   notification.priority === "Medium" ? "default" : 
+                                   "outline"} 
+                           className="mt-1 inline-flex w-fit text-xs">
+                      {notification.priority === "High" && <AlertTriangle className="w-3 h-3 mr-1" />}
+                      {notification.priority}
+                    </Badge>
+                  )}
+                </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button 
@@ -321,6 +374,23 @@ const NotificationManagement = ({ searchQuery, filterStatus }: NotificationManag
               onChange={(e) => setNewNotification({...newNotification, message: e.target.value})}
             />
           </div>
+          <div>
+            <Label htmlFor="notification-priority">Priority</Label>
+            <select 
+              id="notification-priority"
+              className="w-full h-10 px-3 py-2 border rounded-md mt-1"
+              value={newNotification.priority || "Medium"}
+              onChange={(e) => setNewNotification({
+                ...newNotification, 
+                priority: e.target.value as "Low" | "Medium" | "High" | undefined
+              })}
+            >
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+
           <div className="pt-2 flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"

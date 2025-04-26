@@ -9,20 +9,25 @@ interface ThemeToggleProps {
 
 export const ThemeToggle = ({ className }: ThemeToggleProps) => {
   const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
 
   return (
     <button
       onClick={toggleTheme}
       className={cn(
-        "w-10 h-10 flex items-center justify-center rounded-full transition-colors",
-        theme === "dark" 
-          ? "text-yellow-300 hover:bg-gray-800" 
-          : "text-gray-700 hover:bg-gray-100",
+        "flex items-center justify-center rounded-full transition-colors",
+        isDark 
+          ? "bg-zinc-800 text-yellow-400 hover:bg-zinc-700" 
+          : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200",
         className
       )}
-      aria-label="Toggle theme"
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
-      {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+      {isDark ? (
+        <Sun className="w-5 h-5" />
+      ) : (
+        <Moon className="w-5 h-5" />
+      )}
     </button>
   );
 };

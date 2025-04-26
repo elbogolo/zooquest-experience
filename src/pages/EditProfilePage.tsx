@@ -83,43 +83,43 @@ const EditProfilePage = () => {
         {/* Edit Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="name" className="block text-foreground mb-1">Name</label>
+            <label htmlFor="name" className="block text-foreground mb-2 font-medium">Name</label>
             <input
               id="name"
               name="name"
               type="text"
               value={formData.name}
               onChange={handleChange}
-              className="zoo-text-field"
+              className="w-full px-4 py-3 rounded-md border border-border bg-card dark:bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
             />
           </div>
           
           <div>
-            <label htmlFor="email" className="block text-foreground mb-1">Email</label>
+            <label htmlFor="email" className="block text-foreground mb-2 font-medium">Email</label>
             <input
               id="email"
               name="email"
               type="email"
               value={formData.email}
               onChange={handleChange}
-              className="zoo-text-field"
+              className="w-full px-4 py-3 rounded-md border border-border bg-card dark:bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
             />
           </div>
           
           <div>
-            <label htmlFor="password" className="block text-foreground mb-1">Password</label>
+            <label htmlFor="password" className="block text-foreground mb-2 font-medium">Password</label>
             <input
               id="password"
               name="password"
               type="password"
               value={formData.password}
               onChange={handleChange}
-              className="zoo-text-field"
+              className="w-full px-4 py-3 rounded-md border border-border bg-card dark:bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
             />
           </div>
           
           <div>
-            <label htmlFor="dateOfBirth" className="block text-foreground mb-1">Date of Birth</label>
+            <label htmlFor="dateOfBirth" className="block text-foreground mb-2 font-medium">Date of Birth</label>
             <div className="relative">
               <input
                 id="dateOfBirth"
@@ -127,9 +127,9 @@ const EditProfilePage = () => {
                 type="text"
                 value={formData.dateOfBirth}
                 onChange={handleChange}
-                className="zoo-text-field"
+                className="w-full px-4 py-3 rounded-md border border-border bg-card dark:bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
               />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
@@ -138,7 +138,7 @@ const EditProfilePage = () => {
           </div>
           
           <div>
-            <label htmlFor="country" className="block text-foreground mb-1">Country/Region</label>
+            <label htmlFor="country" className="block text-foreground mb-2 font-medium">Country/Region</label>
             <div className="relative">
               <input
                 id="country"
@@ -146,9 +146,9 @@ const EditProfilePage = () => {
                 type="text"
                 value={formData.country}
                 onChange={handleChange}
-                className="zoo-text-field"
+                className="w-full px-4 py-3 rounded-md border border-border bg-card dark:bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
               />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
@@ -156,7 +156,7 @@ const EditProfilePage = () => {
             </div>
           </div>
           
-          <Button type="submit" className="w-full mt-8">Save changes</Button>
+          <Button type="submit" className="w-full mt-8 py-6 text-base font-medium">Save changes</Button>
         </form>
       </div>
       

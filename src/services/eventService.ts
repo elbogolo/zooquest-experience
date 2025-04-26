@@ -15,24 +15,25 @@ export const eventService = {
   },
 
   createEvent: async (data: Partial<AdminEvent>): Promise<AdminEvent> => {
-    // Ensure all required fields are present with default values
+    // Default event properties
     const newEvent: AdminEvent = {
-      id: `event-${Date.now()}`,
+      id: crypto.randomUUID().substring(0, 8),
       title: data.title || "New Event",
       date: data.date || new Date().toISOString().split('T')[0],
       time: data.time || "12:00",
       location: data.location || "Main Area",
-      status: data.status || "Scheduled", // Always provide a default status
+      status: (data.status || "Scheduled") as "Scheduled" | "Ongoing" | "Completed" | "Cancelled", // Always provide a default status
       description: data.description || "",
       duration: data.duration,
       host: data.host,
       attendees: data.attendees,
-      imageUrl: data.imageUrl,
-      createdAt: new Date().toISOString()
+      imageUrl: data.imageUrl
     };
     
-    mockDatabase.events.push(newEvent);
-    return simulateAPI(newEvent);
+    // Ensure the event object has all required fields before adding to database
+    const validEvent = ensureRequiredFields(newEvent);
+    mockDatabase.events.push(validEvent);
+    return simulateAPI(validEvent);
   },
 
   updateEvent: async (id: string, data: Partial<AdminEvent>): Promise<AdminEvent> => {
@@ -48,12 +49,13 @@ export const eventService = {
       date: data.date || mockDatabase.events[index].date || new Date().toISOString().split('T')[0],
       time: data.time || mockDatabase.events[index].time || "12:00",
       location: data.location || mockDatabase.events[index].location || "Main Area",
-      status: data.status || mockDatabase.events[index].status || "Scheduled",
-      updatedAt: new Date().toISOString()
+      status: (data.status || mockDatabase.events[index].status || "Scheduled") as "Scheduled" | "Ongoing" | "Completed" | "Cancelled"
     };
     
-    mockDatabase.events[index] = updatedEvent;
-    return simulateAPI(updatedEvent);
+    // Ensure the event object has all required fields before updating the database
+    const validEvent = ensureRequiredFields(updatedEvent);
+    mockDatabase.events[index] = validEvent;
+    return simulateAPI(validEvent);
   },
 
   deleteEvent: async (id: string): Promise<void> => {
@@ -64,3 +66,16 @@ export const eventService = {
     return simulateAPI(undefined);
   }
 };
+
+// Helper function to ensure all required fields are present in an event object
+function ensureRequiredFields(event: AdminEvent): AdminEvent & { status: "Scheduled" | "Ongoing" | "Completed" | "Cancelled" } {
+  return {
+    ...event,
+    id: event.id,
+    title: event.title,
+    date: event.date,
+    time: event.time,
+    location: event.location,
+    status: event.status || "Scheduled" as "Scheduled" | "Ongoing" | "Completed" | "Cancelled"
+  };
+}
