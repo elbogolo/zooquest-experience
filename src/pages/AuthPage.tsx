@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
@@ -10,10 +9,11 @@ type AuthMode = "signin" | "signup" | "welcome" | "forgotPassword";
 const AuthPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, signUp, loginWithGoogle, resetPassword } = useAuth();
+  const { login, signUp, loginWithGoogle, resetPassword, sendEmailVerification } = useAuth();
   const [mode, setMode] = useState<AuthMode>("welcome");
   const [isLoading, setIsLoading] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
+  const [showResendVerification, setShowResendVerification] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -36,16 +36,27 @@ const AuthPage = () => {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      const success = await loginWithGoogle();
-      if (success) {
-        toast.success("Logged in successfully!");
-        navigate(from);
-      } else {
-        toast.error("Failed to log in with Google");
-      }
+      await loginWithGoogle();
+      toast.success("Logged in successfully!");
+      // Use replace: true to ensure proper navigation on mobile
+      navigate(from, { replace: true });
     } catch (error) {
-      toast.error("An error occurred");
+      const errorMessage = error instanceof Error ? error.message : "Failed to log in with Google";
+      toast.error(errorMessage);
       console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      setIsLoading(true);
+      await sendEmailVerification();
+      toast.success("Verification email sent! Please check your inbox.");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to send verification email";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -54,7 +65,7 @@ const AuthPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       if (mode === "signup") {
         // Validate form data
@@ -68,21 +79,41 @@ const AuthPage = () => {
           return;
         }
 
-        const success = await signUp(formData.name, formData.email, formData.password);
-        if (success) {
-          toast.success("Account created successfully!");
-          navigate(from);
+        console.log('🚀 Attempting signup with:', { email: formData.email, name: formData.name });
+        const user = await signUp(formData.email, formData.password, formData.name);
+        console.log('✅ Signup successful, user:', user);
+        
+        if (!user.emailVerified) {
+          toast.success("Account created! Please check your email and verify your account before signing in.");
+          setMode("signin");
+          setFormData({
+            name: "",
+            email: formData.email, // Keep email for easy signin
+            password: "",
+            confirmPassword: "",
+            agreeToTerms: false,
+          });
         } else {
-          toast.error("Failed to create account");
+          toast.success("Account created successfully!");
+          console.log('🔄 Navigating to:', from);
+          navigate(from);
         }
       } else if (mode === "signin") {
-        const success = await login(formData.email, formData.password);
-        if (success) {
-          toast.success("Logged in successfully!");
-          navigate(from);
-        } else {
-          toast.error("Invalid email or password");
+        const user = await login(formData.email, formData.password);
+        
+        // Only require email verification for users created after June 20, 2025
+        const emailVerificationCutoffDate = new Date('2025-06-20T00:00:00Z');
+        const userCreatedAt = user.createdAt ? new Date(user.createdAt) : emailVerificationCutoffDate;
+        const requiresEmailVerification = userCreatedAt > emailVerificationCutoffDate;
+        
+        if (requiresEmailVerification && !user.emailVerified) {
+          toast.error("Please verify your email before accessing the app. Check your inbox for a verification link.");
+          setShowResendVerification(true);
+          return;
         }
+        
+        toast.success("Logged in successfully!");
+        navigate(from);
       } else if (mode === "forgotPassword") {
         if (forgotEmail) {
           try {
@@ -97,7 +128,8 @@ const AuthPage = () => {
         }
       }
     } catch (error) {
-      toast.error("An error occurred");
+      const errorMessage = error instanceof Error ? error.message : "Authentication failed";
+      toast.error(errorMessage);
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -114,23 +146,16 @@ const AuthPage = () => {
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
-        
-        <div className="bg-white/10 rounded-full px-4 py-1 text-white flex items-center">
-          English
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-1">
-            <path d="M4 6L8 10L12 6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
       </div>
 
       {/* Welcome Screen */}
       {mode === "welcome" && (
         <div className="flex-1 flex flex-col items-center justify-center text-white px-8">
-          <div className="w-32 h-32 rounded-full bg-white/10 backdrop-blur-sm mb-8 flex items-center justify-center">
+          <div className="w-52 h-52 flex items-center justify-center mb-8">
             <img 
-              src="lovable-uploads/2721d049-baba-46d1-af7f-d6b85bfa1caf.png" 
+              src="/logo.svg" 
               alt="Accra Zoo Logo" 
-              className="w-24 h-24 object-contain" 
+              className="w-48 h-48 object-contain" 
             />
           </div>
           
@@ -292,6 +317,18 @@ const AuthPage = () => {
                 Forgot Password?
               </button>
             </div>
+            
+            {showResendVerification && (
+              <div className="text-right">
+                <button 
+                  type="button" 
+                  onClick={handleResendVerification} 
+                  className="text-white/80 text-sm underline"
+                >
+                  Resend Verification Email
+                </button>
+              </div>
+            )}
             
             <button 
               type="submit" 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Edit, Trash2, Image, FileText, RefreshCw, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -13,7 +12,8 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { adminService, AdminAnimal } from "@/services/adminService";
+import { adminService } from "@/services/adminService";
+import { AdminAnimal } from "@/types/admin";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -23,6 +23,16 @@ interface AnimalManagementProps {
 }
 
 const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) => {
+  // Helper function to format location for display
+  const formatLocationForDisplay = (location: string | { lat: number; lng: number } | undefined | null): string => {
+    if (!location) return 'Unknown';
+    if (typeof location === 'string') return location;
+    if (typeof location === 'object' && 'lat' in location && 'lng' in location) {
+      return `${location.lat}, ${location.lng}`;
+    }
+    return 'Unknown';
+  };
+
   const [animals, setAnimals] = useState<AdminAnimal[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedAnimal, setSelectedAnimal] = useState<AdminAnimal | null>(null);
@@ -51,7 +61,7 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
   const fetchAnimals = async () => {
     setLoading(true);
     try {
-      const data = await adminService.getItems<AdminAnimal>("animals");
+      const data = await adminService.getItems("animals") as AdminAnimal[];
       setAnimals(data);
     } catch (error) {
       toast.error("Failed to load animals");
@@ -77,7 +87,7 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
 
     setLoading(true);
     try {
-      const createdAnimal = await adminService.createItem<AdminAnimal>("animals", newAnimal);
+      const createdAnimal = await adminService.createItem("animals", newAnimal) as AdminAnimal;
       setAnimals([...animals, createdAnimal]);
       setNewAnimal({
         name: "",
@@ -99,10 +109,7 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
   const [animalToEdit, setAnimalToEdit] = useState<AdminAnimal | null>(null);
   const [editedAnimal, setEditedAnimal] = useState<Partial<AdminAnimal>>({});
 
-  const handleEditAnimal = async (id: string) => {
-    const animal = animals.find(a => a.id === id);
-    if (!animal) return;
-
+  const handleEditAnimal = (animal: AdminAnimal) => {
     // Set the animal to edit and open modal
     setAnimalToEdit(animal);
     setEditedAnimal({
@@ -127,11 +134,11 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
 
     setLoading(true);
     try {
-      const updatedAnimal = await adminService.updateItem<AdminAnimal>(
+      const updatedAnimal = await adminService.updateItem(
         "animals", 
         animalToEdit.id, 
         editedAnimal
-      );
+      ) as AdminAnimal;
       
       setAnimals(animals.map(a => a.id === animalToEdit.id ? updatedAnimal : a));
       toast.success(`${updatedAnimal.name} updated successfully`);
@@ -177,14 +184,14 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
     setLoading(true);
     
     try {
-      const imageUrl = await adminService.uploadImage(file, "animals", selectedAnimal.id);
+      const result = await adminService.uploadAnimalImage(selectedAnimal.id, file);
       
       // Update the animal with the new image URL
-      const updatedAnimal = await adminService.updateItem<AdminAnimal>(
+      const updatedAnimal = await adminService.updateItem(
         "animals",
         selectedAnimal.id,
-        { imageUrl }
-      );
+        { imageUrl: result.imageUrl }
+      ) as AdminAnimal;
       
       setAnimals(animals.map(a => a.id === selectedAnimal.id ? updatedAnimal : a));
       toast.success(`Image for ${selectedAnimal.name} uploaded successfully`);
@@ -229,7 +236,7 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
       });
       
       // Update the animal's last checkup
-      const updatedAnimals = await adminService.getItems<AdminAnimal>("animals");
+      const updatedAnimals = await adminService.getItems("animals") as AdminAnimal[];
       setAnimals(updatedAnimals);
       
       setHealthReportDialogOpen(false);
@@ -243,164 +250,194 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
   };
 
   return (
-    <div className="bg-card dark:bg-card border border-border rounded-xl shadow-sm p-4">
-      <h2 className="text-lg font-semibold mb-3 flex items-center gap-2 text-foreground">
-        <FileText className="h-5 w-5 text-primary" />
-        Animals Management
-      </h2>
-      
-      <div className="mb-4 border border-border rounded-lg p-3 bg-muted/30 dark:bg-muted/10">
-        <h3 className="text-md font-medium mb-2 text-foreground">Add New Animal</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="animal-name">Name</Label>
-            <Input
-              id="animal-name"
-              value={newAnimal.name}
-              onChange={(e) => setNewAnimal({...newAnimal, name: e.target.value})}
-              placeholder="Animal name"
-            />
-          </div>
-          <div>
-            <Label htmlFor="animal-species">Species</Label>
-            <Input
-              id="animal-species"
-              value={newAnimal.species || ""}
-              onChange={(e) => setNewAnimal({...newAnimal, species: e.target.value})}
-              placeholder="Species"
-            />
-          </div>
-          <div>
-            <Label htmlFor="animal-location">Location</Label>
-            <Input
-              id="animal-location"
-              value={newAnimal.location}
-              onChange={(e) => setNewAnimal({...newAnimal, location: e.target.value})}
-              placeholder="Location"
-            />
-          </div>
-          <div>
-            <Label htmlFor="animal-status">Status</Label>
-            <select
-              id="animal-status"
-              className="w-full rounded-md border border-input bg-background px-3 h-10 text-foreground"
-              value={newAnimal.status}
-              onChange={(e) => setNewAnimal({
-                ...newAnimal, 
-                status: e.target.value as AdminAnimal['status']
-              })}
-            >
-              <option value="Healthy">Healthy</option>
-              <option value="Under observation">Under observation</option>
-              <option value="Scheduled for checkup">Scheduled for checkup</option>
-              <option value="Treatment required">Treatment required</option>
-            </select>
-          </div>
-        </div>
-        <Button 
-          onClick={handleAddAnimal} 
-          className="mt-3"
-          disabled={loading}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Add Animal
-        </Button>
+    <div className="space-y-4">
+      {/* Add New Animal Button */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-sm font-medium text-foreground">Animal Directory</h2>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button size="sm" className="h-8 text-xs px-3">
+              <Plus className="w-3 h-3 mr-1" />
+              Add Animal
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-sm">Add New Animal</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="name" className="text-xs">Name</Label>
+                  <Input
+                    id="name"
+                    value={newAnimal.name}
+                    onChange={(e) => setNewAnimal({ ...newAnimal, name: e.target.value })}
+                    placeholder="Animal name"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="species" className="text-xs">Species</Label>
+                  <Input
+                    id="species"
+                    value={newAnimal.species}
+                    onChange={(e) => setNewAnimal({ ...newAnimal, species: e.target.value })}
+                    placeholder="Animal species"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="location" className="text-xs">Location</Label>
+                  <Input
+                    id="location"
+                    value={formatLocationForDisplay(newAnimal.location)}
+                    onChange={(e) => setNewAnimal({ ...newAnimal, location: e.target.value })}
+                    placeholder="Enclosure/Location"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="status" className="text-xs">Health Status</Label>
+                  <select
+                    className="w-full h-8 text-xs border rounded-md px-2 bg-background"
+                    value={newAnimal.status}
+                    onChange={(e) => setNewAnimal({ ...newAnimal, status: e.target.value as AdminAnimal['status'] })}
+                  >
+                    <option value="Healthy">Healthy</option>
+                    <option value="Under observation">Under observation</option>
+                    <option value="Treatment required">Treatment required</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="dietaryNeeds" className="text-xs">Dietary Needs</Label>
+                <textarea
+                  id="dietaryNeeds"
+                  value={newAnimal.dietaryNeeds || ""}
+                  onChange={(e) => setNewAnimal({ ...newAnimal, dietaryNeeds: e.target.value })}
+                  placeholder="Dietary requirements..."
+                  className="w-full h-16 text-xs border rounded-md px-2 py-1 bg-background resize-none"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button 
+                  onClick={handleAddAnimal} 
+                  disabled={loading}
+                  className="flex-1 h-8 text-xs"
+                >
+                  {loading ? (
+                    <>
+                      <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    'Add Animal'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-      
-      <div className="overflow-x-auto">
-        <Table className="border-collapse w-full">
+
+      {/* Animals Table */}
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Last Checkup</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="text-xs h-8 w-12">Image</TableHead>
+              <TableHead className="text-xs h-8">Name</TableHead>
+              <TableHead className="text-xs h-8 hidden sm:table-cell">Species</TableHead>
+              <TableHead className="text-xs h-8 hidden md:table-cell">Location</TableHead>
+              <TableHead className="text-xs h-8">Status</TableHead>
+              <TableHead className="text-xs h-8 w-20">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  <div className="flex justify-center">
-                    <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+                <TableCell colSpan={6} className="text-center py-6">
+                  <div className="flex items-center justify-center">
+                    <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                    <span className="text-xs">Loading animals...</span>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">Loading animals data...</p>
                 </TableCell>
               </TableRow>
             ) : getFilteredAnimals().length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  <p className="text-muted-foreground">No animals found matching your criteria</p>
+                <TableCell colSpan={6} className="text-center py-6">
+                  <p className="text-xs text-muted-foreground">No animals found</p>
                 </TableCell>
               </TableRow>
             ) : (
               getFilteredAnimals().map((animal) => (
                 <TableRow key={animal.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {animal.imageUrl && (
-                        <div className="w-8 h-8 rounded-full overflow-hidden">
-                          <img 
-                            src={animal.imageUrl} 
-                            alt={animal.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                      {animal.name}
+                  <TableCell className="p-2">
+                    <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                      {animal.imageUrl ? (
+                        <img 
+                          src={animal.imageUrl} 
+                          alt={animal.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
+                      <span className="text-xs text-muted-foreground">🦁</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-foreground">{animal.location}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
+                  <TableCell className="py-2">
+                    <div>
+                      <p className="text-xs font-medium">{animal.name}</p>
+                      <p className="text-xs text-muted-foreground sm:hidden">{animal.species}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs py-2 hidden sm:table-cell">{animal.species}</TableCell>
+                  <TableCell className="text-xs py-2 hidden md:table-cell">
+                    {formatLocationForDisplay(animal.location)}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
                       animal.status === "Healthy" 
-                        ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" 
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                         : animal.status === "Under observation"
-                        ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200"
-                        : "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200"
+                        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                     }`}>
                       {animal.status}
                     </span>
                   </TableCell>
-                  <TableCell className="text-foreground">{animal.lastCheckup}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
+                  <TableCell className="py-2">
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
                         size="sm"
-                        onClick={() => openHealthReportDialog(animal.id)}
-                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      >
-                        <FileText className="h-4 w-4" />
-                        <span className="sr-only">Health Report</span>
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
+                        className="h-6 w-6 p-0"
                         onClick={() => handleUploadImage(animal.id)}
-                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        title="Upload image"
                       >
-                        <Image className="h-4 w-4" />
-                        <span className="sr-only">Upload Image</span>
+                        <Image className="w-3 h-3" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="outline"
                         size="sm"
-                        onClick={() => handleEditAnimal(animal.id)}
-                        className="h-8 w-8 p-0"
+                        className="h-6 w-6 p-0"
+                        onClick={() => handleEditAnimal(animal)}
                       >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
+                        <Edit className="w-3 h-3" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="outline"
                         size="sm"
+                        className="h-6 w-6 p-0"
                         onClick={() => handleDeleteAnimal(animal.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
                   </TableCell>
@@ -422,97 +459,159 @@ const AnimalManagement = ({ searchQuery, filterStatus }: AnimalManagementProps) 
       
       {/* Edit Animal Modal */}
       <Dialog open={editAnimalModalOpen} onOpenChange={setEditAnimalModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Animal: {animalToEdit?.name}</DialogTitle>
+            <DialogTitle className="text-sm">Edit Animal: {animalToEdit?.name}</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-3 mt-2">
-            <div>
-              <Label htmlFor="edit-animal-name">Name</Label>
-              <Input
-                id="edit-animal-name"
-                value={editedAnimal.name || ''}
-                onChange={(e) => setEditedAnimal({...editedAnimal, name: e.target.value})}
-                placeholder="Animal name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-animal-species">Species</Label>
-              <Input
-                id="edit-animal-species"
-                value={editedAnimal.species || ''}
-                onChange={(e) => setEditedAnimal({...editedAnimal, species: e.target.value})}
-                placeholder="Species"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-animal-location">Location</Label>
-              <Input
-                id="edit-animal-location"
-                value={editedAnimal.location || ''}
-                onChange={(e) => setEditedAnimal({...editedAnimal, location: e.target.value})}
-                placeholder="Location"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-animal-status">Status</Label>
-              <select
-                id="edit-animal-status"
-                className="w-full rounded-md border border-input bg-background px-3 h-10 text-foreground"
-                value={editedAnimal.status || 'Healthy'}
-                onChange={(e) => setEditedAnimal({
-                  ...editedAnimal, 
-                  status: e.target.value as AdminAnimal['status']
-                })}
-              >
-                <option value="Healthy">Healthy</option>
-                <option value="Under observation">Under observation</option>
-                <option value="Scheduled for checkup">Scheduled for checkup</option>
-                <option value="Treatment required">Treatment required</option>
-              </select>
-            </div>
-            <div>
-              <Label htmlFor="edit-animal-dietary">Dietary Needs</Label>
-              <textarea
-                id="edit-animal-dietary"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[60px] text-foreground"
-                value={editedAnimal.dietaryNeeds || ''}
-                onChange={(e) => setEditedAnimal({...editedAnimal, dietaryNeeds: e.target.value})}
-                placeholder="Dietary needs and requirements"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-animal-caretaker">Primary Caretaker</Label>
-              <Input
-                id="edit-animal-caretaker"
-                value={editedAnimal.caretaker || ''}
-                onChange={(e) => setEditedAnimal({...editedAnimal, caretaker: e.target.value})}
-                placeholder="Primary caretaker"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-animal-nextcheckup">Next Checkup</Label>
-              <Input
-                id="edit-animal-nextcheckup"
-                type="date"
-                value={editedAnimal.nextCheckup || ''}
-                onChange={(e) => setEditedAnimal({...editedAnimal, nextCheckup: e.target.value})}
-              />
+          <div className="space-y-4 mt-2">
+            {/* Basic Information Section */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-medium text-foreground border-b pb-1">Basic Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-animal-name" className="text-xs">Name</Label>
+                  <Input
+                    id="edit-animal-name"
+                    value={editedAnimal.name || ''}
+                    onChange={(e) => setEditedAnimal({...editedAnimal, name: e.target.value})}
+                    placeholder="Animal name"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-animal-species" className="text-xs">Species</Label>
+                  <Input
+                    id="edit-animal-species"
+                    value={editedAnimal.species || ''}
+                    onChange={(e) => setEditedAnimal({...editedAnimal, species: e.target.value})}
+                    placeholder="Species"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-animal-location" className="text-xs">Location</Label>
+                  <Input
+                    id="edit-animal-location"
+                    value={formatLocationForDisplay(editedAnimal.location)}
+                    onChange={(e) => setEditedAnimal({...editedAnimal, location: e.target.value})}
+                    placeholder="Location"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-animal-status" className="text-xs">Health Status</Label>
+                  <select
+                    id="edit-animal-status"
+                    className="w-full h-8 text-xs border rounded-md px-2 bg-background"
+                    value={editedAnimal.status || 'Healthy'}
+                    onChange={(e) => setEditedAnimal({
+                      ...editedAnimal, 
+                      status: e.target.value as AdminAnimal['status']
+                    })}
+                  >
+                    <option value="Healthy">Healthy</option>
+                    <option value="Under observation">Under observation</option>
+                    <option value="Scheduled for checkup">Scheduled for checkup</option>
+                    <option value="Treatment required">Treatment required</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3">
+            {/* Care Information Section */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-medium text-foreground border-b pb-1">Care Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-animal-caretaker" className="text-xs">Primary Caretaker</Label>
+                  <Input
+                    id="edit-animal-caretaker"
+                    value={editedAnimal.caretaker || ''}
+                    onChange={(e) => setEditedAnimal({...editedAnimal, caretaker: e.target.value})}
+                    placeholder="Primary caretaker"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-animal-nextcheckup" className="text-xs">Next Checkup</Label>
+                  <Input
+                    id="edit-animal-nextcheckup"
+                    type="date"
+                    value={editedAnimal.nextCheckup || ''}
+                    onChange={(e) => setEditedAnimal({...editedAnimal, nextCheckup: e.target.value})}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-animal-dietary" className="text-xs">Dietary Needs</Label>
+                <textarea
+                  id="edit-animal-dietary"
+                  className="w-full rounded-md border border-input bg-background px-2 py-1 min-h-[60px] text-xs resize-none"
+                  value={editedAnimal.dietaryNeeds || ''}
+                  onChange={(e) => setEditedAnimal({...editedAnimal, dietaryNeeds: e.target.value})}
+                  placeholder="Dietary needs and requirements"
+                />
+              </div>
+            </div>
+
+            {/* Image Management Section */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-medium text-foreground border-b pb-1">Image Management</h3>
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  {animalToEdit?.imageUrl ? (
+                    <div className="relative w-16 h-16 bg-gray-100 rounded border">
+                      <img
+                        src={animalToEdit.imageUrl}
+                        alt={animalToEdit.name}
+                        className="w-full h-full object-cover rounded"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "/api/placeholder/150/150";
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 bg-gray-100 rounded border flex items-center justify-center">
+                      <Image className="w-4 h-4 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    {animalToEdit?.imageUrl ? 'Current animal image' : 'No image uploaded'}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleUploadImage(animalToEdit?.id || '')}
+                    className="h-6 text-xs px-2"
+                  >
+                    <Image className="w-3 h-3 mr-1" />
+                    {animalToEdit?.imageUrl ? 'Change' : 'Upload'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-2 pt-2 border-t">
               <Button
                 variant="outline"
                 onClick={() => setEditAnimalModalOpen(false)}
+                className="h-8 text-xs px-3"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSaveEditedAnimal}
                 disabled={loading}
+                className="h-8 text-xs px-3"
               >
-                Save Changes
+                {loading ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </div>

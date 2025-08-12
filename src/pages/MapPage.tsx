@@ -1,462 +1,329 @@
-import { useState, useEffect } from "react";
-import { useSearchParams, useLocation } from "react-router-dom";
-import { Navigation, MapPin, Compass, X, RotateCcw, Search, AlertCircle, Route, Loader } from "lucide-react";
-import { toast } from "sonner";
-import PageHeader from "../components/PageHeader";
-import BottomNavbar from "../components/BottomNavbar";
-import SearchBar from "../components/SearchBar";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useMapbox, MapLocation } from "@/hooks/map/use-mapbox";
-import "mapbox-gl/dist/mapbox-gl.css";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import BackButton from "@/components/BackButton";
+import BottomNavbar from "@/components/BottomNavbar";
+import SafeMap from "@/components/SafeMap";
+import { AdminAnimal } from "@/types/admin";
+import adminService from "@/services/adminService";
+import { toast } from "sonner";
+import {
+  MapPin,
+  Search,
+  Filter,
+  Navigation,
+  Locate,
+  AlertCircle
+} from "lucide-react";
 
-const zooLocations: Record<string, MapLocation> = {
-  lion: {
-    id: "lion",
-    name: "Lion Enclosure",
-    image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
-    distance: "10 Min",
-    coordinates: [-73.975, 40.733] as [number, number],
-    directions: ["Head north from the main entrance", "Turn right at the food court", "The lion enclosure will be on your left"],
-    type: "animal" as const
-  },
-  tiger: {
-    id: "tiger",
-    name: "Tiger Territory",
-    image: "public/lovable-uploads/385ec9d1-9804-48f9-95d9-e88ad31bedb7.png",
-    distance: "15 Min",
-    coordinates: [-73.977, 40.731] as [number, number],
-    directions: ["Head east from the main entrance", "Follow the path past the elephant enclosure", "Tiger Territory is ahead on the right"],
-    type: "animal" as const
-  },
-  gorilla: {
-    id: "gorilla",
-    name: "Gorilla Habitat",
-    image: "public/lovable-uploads/4fe1f1a1-c3d6-477b-b486-5590bda76085.png",
-    distance: "20 Min",
-    coordinates: [-73.981, 40.734] as [number, number],
-    directions: ["Head west from the main entrance", "Take the jungle trail", "Follow signs to the Great Ape House"],
-    type: "animal" as const
-  },
-  peacock: {
-    id: "peacock",
-    name: "Peacock Area",
-    image: "public/lovable-uploads/d65de9b2-e507-4511-a47c-4962de992a26.png",
-    distance: "5 Min",
-    coordinates: [-73.979, 40.729] as [number, number],
-    directions: ["Head straight from the main entrance", "Look for the open garden area", "Peacocks roam freely in this area"],
-    type: "animal" as const
-  },
-  crocodile: {
-    id: "crocodile",
-    name: "Crocodile Pond",
-    image: "public/lovable-uploads/913b61a8-cf4c-4183-9809-0c617218d36c.png",
-    distance: "12 Min",
-    coordinates: [-73.973, 40.732] as [number, number],
-    directions: ["Head southeast from the main entrance", "Follow the water trail", "The crocodile pond will be visible on your right"],
-    type: "animal" as const
-  },
-  tortoise: {
-    id: "tortoise",
-    name: "Tortoise Enclosure",
-    image: "public/lovable-uploads/009a33ba-77b2-49a3-86ae-0586197bf4ab.png",
-    distance: "8 Min",
-    coordinates: [-73.976, 40.735] as [number, number],
-    directions: ["Head northeast from the main entrance", "Pass by the gift shop", "The tortoise enclosure is beyond the small hill"],
-    type: "animal" as const
-  },
-  zebra: {
-    id: "zebra",
-    name: "Zebra Grasslands",
-    image: "public/lovable-uploads/c0779203-cebe-4f61-be65-f8939ee46040.png",
-    distance: "18 Min",
-    coordinates: [-73.982, 40.730] as [number, number],
-    directions: ["Head northwest from the main entrance", "Follow the safari path", "The zebra grasslands will be on your left"],
-    type: "animal" as const
-  },
-  shop: {
-    id: "shop",
-    name: "Gift Shop",
-    image: "public/lovable-uploads/e75bf6ec-5927-4fae-9fff-7807edd185ad.png",
-    distance: "5 Min",
-    coordinates: [-73.978, 40.728] as [number, number],
-    directions: ["Head east from the main entrance", "It's the large building with the green roof", "The gift shop is near the food court"],
-    type: "facility" as const
-  },
-  event1: {
-    id: "event1",
-    name: "Elephant Show",
-    image: "public/lovable-uploads/8076e47b-b1f8-4f4e-8ada-fa1407b76ede.png",
-    distance: "7 Min",
-    coordinates: [-73.974, 40.736] as [number, number],
-    directions: ["Head northeast from the main entrance", "Pass the giraffe enclosure", "The elephant arena will be ahead on your right"],
-    type: "event" as const
-  },
-  event2: {
-    id: "event2",
-    name: "Penguin Feeding",
-    image: "public/lovable-uploads/385ec9d1-9804-48f9-95d9-e88ad31bedb7.png",
-    distance: "12 Min",
-    coordinates: [-73.980, 40.733] as [number, number],
-    directions: ["Head west from the main entrance", "Follow signs to the Aquatic Zone", "The penguin habitat is located inside the building"],
-    type: "event" as const
-  }
+// Helper function to format location for display and comparison
+const formatLocationForDisplay = (location?: string | { lat: number; lng: number }): string => {
+  if (!location) return '';
+  if (typeof location === 'string') return location;
+  return `${location.lat}, ${location.lng}`;
 };
 
-// Define a more specific type for the directions
-interface DirectionStep {
-  instruction: string;
-  distance: string;
-  duration: string;
-}
-
-type LocationKey = keyof typeof zooLocations;
-
 const MapPage = () => {
-  const [searchParams] = useSearchParams();
-  const location = useLocation();
-  const destinationId = searchParams.get('destination');
-  const eventLocation = location.state?.eventLocation;
-  
-  const [search, setSearch] = useState("");
-  const [showDirections, setShowDirections] = useState(!!destinationId);
-  const [activeDirection, setActiveDirection] = useState(0);
-  const [searchResults, setSearchResults] = useState<LocationKey[]>([]);
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  const [filterType, setFilterType] = useState<"all" | "animal" | "event" | "facility">("all");
-  
-  const {
-    mapContainer,
-    isLoaded,
-    selectLocation,
-    selectedLocation,
-    resetView,
-    updateUserLocation,
-    filterLocations,
-    isLocating,
-    directions,
-    isRouteFetching,
-    routeDistance,
-    routeDuration
-  } = useMapbox({
-    initialCenter: [-73.979, 40.732],
-    initialZoom: 15.5,
-    locations: zooLocations
+  const navigate = useNavigate();
+  const [animals, setAnimals] = useState<AdminAnimal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAnimal, setSelectedAnimal] = useState<AdminAnimal | null>(null);
+  const [filterByStatus, setFilterByStatus] = useState<string>("all");
+  const [showDirections, setShowDirections] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const loadAnimals = async () => {
+      try {
+        setLoading(true);
+        const allAnimals = await adminService.getItems('animals') as AdminAnimal[];
+        setAnimals(allAnimals);
+      } catch (error) {
+        console.error("Error loading animals:", error);
+        setError("Failed to load animal locations");
+        toast.error("Failed to load map data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAnimals();
+  }, []);
+
+  const filteredAnimals = animals.filter(animal => {
+    const locationStr = formatLocationForDisplay(animal.location);
+    const matchesSearch = animal.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         animal.species?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         locationStr.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = filterByStatus === "all" || animal.status === filterByStatus;
+    return matchesSearch && matchesStatus;
   });
 
-  // Cast the directions to the more specific type
-  const typedDirections = directions as unknown as DirectionStep[];
-  const destination = selectedLocation ? zooLocations[selectedLocation as LocationKey] : null;
-
-  useEffect(() => {
-    if (destinationId && zooLocations[destinationId as LocationKey]) {
-      selectLocation(destinationId as string);
-      setShowDirections(true);
-      toast.success(`Directions to ${zooLocations[destinationId as LocationKey]?.name || 'destination'} loaded`);
-    }
-  }, [destinationId, isLoaded, selectLocation]);
-
-  useEffect(() => {
-    if (eventLocation && isLoaded) {
-      const eventKey = Object.keys(zooLocations).find(
-        key => zooLocations[key as LocationKey].name.toLowerCase() === eventLocation.toLowerCase()
-      ) as LocationKey | undefined;
-      
-      if (eventKey) {
-        selectLocation(eventKey);
-        setShowDirections(true);
-        toast.success(`Directions to ${zooLocations[eventKey].name} loaded`);
-      } else {
-        toast.error("Event location not found on map");
-      }
-    }
-  }, [eventLocation, isLoaded, selectLocation]);
-
-  useEffect(() => {
-    if (typedDirections.length > 0) {
-      setActiveDirection(0);
-    }
-  }, [typedDirections]);
-
-  useEffect(() => {
-    if (search.length > 1) {
-      const results = Object.keys(zooLocations).filter((key) => 
-        zooLocations[key as LocationKey].name.toLowerCase().includes(search.toLowerCase())
-      ) as LocationKey[];
-      setSearchResults(results);
-      setShowSearchResults(results.length > 0);
-    } else {
-      setShowSearchResults(false);
-    }
-  }, [search]);
-
-  const handleNavigateToLocation = (locationKey: LocationKey) => {
-    setShowSearchResults(false);
-    setSearch("");
-    selectLocation(locationKey);
-    setShowDirections(true);
-    setActiveDirection(0);
-    
-    toast.success(`Navigating to ${zooLocations[locationKey].name}`);
+  const handleAnimalSelect = (animal: AdminAnimal) => {
+    navigate(`/animal/${animal.id}`);
   };
 
-  const handleGetCurrentLocation = () => {
-    updateUserLocation();
+  const toggleOfflineMode = () => {
+    setOfflineMode(!offlineMode);
+    toast.info(offlineMode ? "Online mode enabled" : "Offline mode enabled");
   };
 
-  const handleResetView = () => {
-    resetView();
-    setShowDirections(false);
-    toast.info("Map view reset");
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <BackButton />
+        <div className="container mx-auto px-4 py-6 space-y-6 pb-24">
+          <Skeleton className="h-8 w-48" />
+          <Card>
+            <CardContent className="p-6">
+              <Skeleton className="w-full h-96" />
+            </CardContent>
+          </Card>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[...Array(8)].map((_, i) => (
+              <Skeleton key={i} className="h-20" />
+            ))}
+          </div>
+        </div>
+        <BottomNavbar />
+      </div>
+    );
+  }
 
-  const handleFilterChange = (type: "all" | "animal" | "event" | "facility") => {
-    setFilterType(type);
-    filterLocations(type);
-  };
-
-  const nextDirection = () => {
-    if (typedDirections && activeDirection < typedDirections.length - 1) {
-      setActiveDirection(activeDirection + 1);
-    } else {
-      toast.success("You have reached your destination!");
-    }
-  };
-
-  const prevDirection = () => {
-    if (activeDirection > 0) {
-      setActiveDirection(activeDirection - 1);
-    }
-  };
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <BackButton />
+        <div className="container mx-auto px-4 py-6 pb-24">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="flex items-center justify-between">
+                <span>{error}</span>
+                <Button size="sm" onClick={() => window.location.reload()}>
+                  Retry
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+        <BottomNavbar />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-white">
-      <PageHeader title="Zoo Map" showBackButton showThemeToggle showUserAvatar />
+    <div className="min-h-screen bg-background">
+      <BackButton />
       
-      <div className="h-screen w-full relative pt-16">
-        <div 
-          ref={mapContainer} 
-          className="absolute inset-0 pt-16"
-          style={{ marginTop: '0' }}
-        />
-
-        <div className="absolute top-20 left-4 right-4 z-10 flex items-center justify-between space-x-2">
-          <button
-            onClick={() => handleFilterChange("all")}
-            className={cn(
-              "py-1 px-3 text-xs rounded-full",
-              filterType === "all"
-                ? "bg-zoo-primary text-white"
-                : "bg-white/80 text-gray-700 border border-gray-300"
-            )}
-          >
-            All
-          </button>
-          <button
-            onClick={() => handleFilterChange("animal")}
-            className={cn(
-              "py-1 px-3 text-xs rounded-full",
-              filterType === "animal"
-                ? "bg-zoo-primary text-white"
-                : "bg-white/80 text-gray-700 border border-gray-300"
-            )}
-          >
-            Animals
-          </button>
-          <button
-            onClick={() => handleFilterChange("event")}
-            className={cn(
-              "py-1 px-3 text-xs rounded-full",
-              filterType === "event"
-                ? "bg-orange-500 text-white"
-                : "bg-white/80 text-gray-700 border border-gray-300"
-            )}
-          >
-            Events
-          </button>
-          <button
-            onClick={() => handleFilterChange("facility")}
-            className={cn(
-              "py-1 px-3 text-xs rounded-full",
-              filterType === "facility"
-                ? "bg-blue-500 text-white"
-                : "bg-white/80 text-gray-700 border border-gray-300"
-            )}
-          >
-            Facilities
-          </button>
+      <div className="container mx-auto px-4 py-6 space-y-6 pb-24">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <MapPin className="h-6 w-6" />
+            Zoo Map & Navigation
+          </h1>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                // Simulate GPS location request
+                toast.success("Location enabled - showing your position on the map");
+              }}
+            >
+              <Locate className="h-4 w-4 mr-1" />
+              My Location
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleOfflineMode}
+            >
+              {offlineMode ? "Online Mode" : "Offline Mode"}
+            </Button>
+          </div>
         </div>
 
-        <div className="absolute top-28 left-0 right-0 px-4 z-10">
-          <SearchBar
-            placeholder="Find locations, animals, events..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          {showSearchResults && (
-            <div className="mt-2 bg-white rounded-lg shadow-lg overflow-hidden">
-              {searchResults.map((key) => (
-                <button
-                  key={key}
-                  onClick={() => handleNavigateToLocation(key)}
-                  className="w-full px-4 py-3 flex items-center border-b border-gray-100 hover:bg-gray-50"
-                >
-                  <div className="w-10 h-10 rounded-lg overflow-hidden mr-3">
-                    <img src={zooLocations[key].image} alt={zooLocations[key].name} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-medium">{zooLocations[key].name}</p>
-                    <p className="text-xs text-gray-500">{zooLocations[key].distance} walk</p>
-                  </div>
-                  <MapPin className="w-5 h-5 text-zoo-primary ml-2" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="absolute bottom-32 right-4 flex flex-col gap-2">
-          <button
-            onClick={handleGetCurrentLocation}
-            disabled={isLocating}
-            className="bg-white p-3 rounded-full shadow-lg hover:bg-gray-50 active:bg-gray-100 disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {isLocating ? (
-              <Loader className="h-5 w-5 text-blue-600 animate-spin" />
-            ) : (
-              <Navigation className="h-5 w-5 text-blue-600" />
-            )}
-          </button>
-
-          <button
-            onClick={handleResetView}
-            className="bg-white p-3 rounded-full shadow-lg hover:bg-gray-50 active:bg-gray-100"
-          >
-            <RotateCcw className="h-5 w-5 text-gray-600" />
-          </button>
-          <button
-            className="bg-white p-3 rounded-full shadow-lg hover:bg-gray-50 active:bg-gray-100"
-          >
-            <AlertCircle className="h-5 w-5 text-zoo-primary" />
-          </button>
-        </div>
-
-        {showDirections && destination && (
-          <div className="absolute bottom-20 left-4 right-4 bg-white rounded-xl shadow-xl overflow-hidden z-10 max-h-[45vh] flex flex-col">
-            <div className="p-4 bg-zoo-primary text-white flex justify-between items-center">
-              <div>
-                <h3 className="font-semibold text-lg flex items-center">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  {destination.name}
-                </h3>
-                {!isRouteFetching && (
-                  <div className="flex text-xs text-white/80 mt-1">
-                    <span className="flex items-center">
-                      <Route className="h-3 w-3 mr-1" />
-                      {routeDistance}
-                    </span>
-                    <span className="mx-2">•</span>
-                    <span>{routeDuration} walk</span>
-                  </div>
-                )}
+        {/* Search and Filter Controls */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search animals or locations..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:border-transparent"
+                />
               </div>
-              <button onClick={() => setShowDirections(false)} className="text-white">
-                <X className="h-5 w-5" />
-              </button>
+              
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <select
+                  value={filterByStatus}
+                  onChange={(e) => setFilterByStatus(e.target.value)}
+                  className="px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent"
+                >
+                  <option value="all">All Animals</option>
+                  <option value="Healthy">Healthy</option>
+                  <option value="Under observation">Under Observation</option>
+                  <option value="Treatment required">In Treatment</option>
+                </select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Professional Map */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center">
+                <Navigation className="w-5 h-5 mr-2" />
+                Interactive Navigation Map
+              </span>
+              <div className="text-sm font-normal text-gray-600">
+                {filteredAnimals.length} animal{filteredAnimals.length !== 1 ? 's' : ''} shown
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SafeMap
+              animals={filteredAnimals}
+              selectedAnimal={selectedAnimal}
+              onAnimalSelect={handleAnimalSelect}
+              showDirections={showDirections}
+              offlineMode={offlineMode}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Map Statistics */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{animals.length}</div>
+                <div className="text-sm text-muted-foreground">Total Animals</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{new Set(animals.map(animal => formatLocationForDisplay(animal.location))).size}</div>
+                <div className="text-sm text-muted-foreground">Zoo Areas</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  {animals.filter(a => a.status === 'Healthy').length}
+                </div>
+                <div className="text-sm text-muted-foreground">Healthy Animals</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                  {filteredAnimals.length}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {searchQuery || filterByStatus !== 'all' ? 'Found' : 'Showing'}
+                </div>
+              </div>
             </div>
             
-            {isRouteFetching ? (
-              <div className="flex flex-col items-center justify-center p-8">
-                <Loader className="h-8 w-8 text-zoo-primary animate-spin mb-2" />
-                <p className="text-gray-500 text-sm">Calculating best route...</p>
-              </div>
-            ) : (
-              <>
-                <div className="overflow-y-auto p-4 flex-1">
-                  <div className="flex items-center justify-between text-sm text-gray-500 mb-4 bg-blue-50 p-2 rounded-md">
-                    <span className="flex items-center">
-                      <Compass className="h-4 w-4 mr-1 text-blue-600" />
-                      Follow the blue path
-                    </span>
-                    <button 
-                      onClick={handleGetCurrentLocation}
-                      disabled={isLocating}
-                      className="text-xs flex items-center text-blue-600 font-medium"
-                    >
-                      {isLocating ? (
-                        <Loader className="h-3 w-3 mr-1 animate-spin" />
-                      ) : (
-                        <Navigation className="h-3 w-3 mr-1" />
-                      )}
-                      {isLocating ? 'Locating...' : 'Update My Location'}
-                    </button>
-                  </div>
-                  
-                  <ol className="space-y-3">
-                    {typedDirections.map((direction, index) => (
-                      <li 
-                        key={index} 
-                        className={cn(
-                          "pl-10 relative py-2 text-sm pr-2",
-                          index === activeDirection 
-                            ? "bg-blue-50 border-l-4 border-zoo-primary rounded-r-md font-medium" 
-                            : "border-l border-gray-200"
-                        )}
-                      >
-                        {index === activeDirection && (
-                          <div className="absolute left-2 top-1/2 -translate-y-1/2 text-zoo-primary">
-                            <Navigation className="h-5 w-5" />
-                          </div>
-                        )}
-                        <div className="flex flex-col">
-                          <span>{direction.instruction}</span>
-                          <span className="text-xs text-gray-500 mt-1">
-                            {direction.distance}m • about {direction.duration} min
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-                
-                <div className="p-3 border-t border-gray-200 flex justify-between items-center bg-gray-50">
-                  <button 
-                    onClick={prevDirection}
-                    disabled={activeDirection === 0}
-                    className={cn(
-                      "px-3 py-1 rounded-md text-sm",
-                      activeDirection === 0 
-                        ? "text-gray-400 bg-gray-100" 
-                        : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
-                    )}
-                  >
-                    Previous
-                  </button>
-                  
-                  <span className="text-sm text-gray-500">
-                    Step {activeDirection + 1} of {typedDirections.length}
+            {(searchQuery || filterByStatus !== 'all') && (
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-blue-700 dark:text-blue-300 font-medium">
+                    Filters Active: 
+                    {searchQuery && ` "${searchQuery}"`}
+                    {filterByStatus !== 'all' && ` ${filterByStatus} status`}
                   </span>
-                  
-                  <button 
-                    onClick={nextDirection}
-                    disabled={activeDirection === typedDirections.length - 1}
-                    className={cn(
-                      "px-3 py-1 rounded-md text-sm",
-                      activeDirection === typedDirections.length - 1 
-                        ? "text-gray-400 bg-gray-100" 
-                        : "text-white bg-zoo-primary hover:bg-zoo-primary/90"
-                    )}
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      setSearchQuery("");
+                      setFilterByStatus("all");
+                    }}
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 h-auto p-1"
                   >
-                    Next
-                  </button>
+                    Clear All
+                  </Button>
                 </div>
-              </>
+              </div>
             )}
-          </div>
-        )}
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Button
+                variant="outline"
+                className="h-16 flex flex-col items-center gap-1"
+                onClick={() => navigate("/visit-history")}
+              >
+                <Navigation className="h-5 w-5" />
+                <span className="text-xs">Visit History</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-16 flex flex-col items-center gap-1"
+                onClick={() => navigate("/favorites")}
+              >
+                <MapPin className="h-5 w-5" />
+                <span className="text-xs">My Favorites</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-16 flex flex-col items-center gap-1"
+                onClick={() => {
+                  toast.success("Finding your location...");
+                  // Simulate location finding
+                  setTimeout(() => {
+                    toast.success("You are near the Main Entrance!");
+                  }, 1500);
+                }}
+              >
+                <Locate className="h-5 w-5" />
+                <span className="text-xs">Find Me</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-16 flex flex-col items-center gap-1"
+                onClick={() => navigate("/events")}
+              >
+                <AlertCircle className="h-5 w-5" />
+                <span className="text-xs">Events Today</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      
+
       <BottomNavbar />
     </div>
   );

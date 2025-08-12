@@ -1,21 +1,11 @@
-
-import React, { useState, useEffect } from "react";
-import { 
-  Settings, 
-  Bell, 
-  Upload, 
-  Users, 
-  AlertTriangle, 
-  RefreshCw,
-  Database,
-  Shield,
-  LayoutDashboard
-} from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { adminService, AdminSystemSettings, AdminStaff } from "@/services/adminService";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Table, 
   TableBody, 
@@ -23,358 +13,393 @@ import {
   TableHead, 
   TableHeader, 
   TableRow 
-} from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+} from '@/components/ui/table';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
+import { Sun, Moon, Save, AlertTriangle, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { useTheme } from '@/components/ThemeProvider';
+import { adminService } from '@/services/adminService';
+import type { AdminStaff, AdminSystemSettings } from '@/types/admin';
 
 interface AdminSettingsProps {
   searchQuery: string;
   filterStatus: string;
 }
 
-const AdminSettings = ({ searchQuery, filterStatus }: AdminSettingsProps) => {
-  const [staff, setStaff] = useState<AdminStaff[]>([]);
+const AdminSettings: React.FC<AdminSettingsProps> = ({ searchQuery, filterStatus }) => {
+  const { theme, setTheme } = useTheme();
+  
+  // Settings state
   const [systemSettings, setSystemSettings] = useState<AdminSystemSettings>({
     enableNotifications: true,
     lastBackupDate: new Date().toISOString(),
-    theme: "light"
+    theme: 'dark'
   });
-  const [loading, setLoading] = useState(false);
-  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
+  // Staff state
+  const [staff, setStaff] = useState<AdminStaff[]>([]);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [isLoadingStaff, setIsLoadingStaff] = useState(true);
+  const [isSaving, setSaving] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+
+  // Load data on component mount
   useEffect(() => {
-    fetchData();
+    loadSystemSettings();
+    loadStaff();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const loadSystemSettings = async () => {
     try {
-      const [staffData, settingsData] = await Promise.all([
-        adminService.getItems<AdminStaff>("staff"),
-        adminService.getSystemSettings()
-      ]);
-      
-      setStaff(staffData);
-      setSystemSettings(settingsData);
+      setIsLoadingSettings(true);
+      const settings = await adminService.getSystemSettings();
+      setSystemSettings(settings);
     } catch (error) {
-      toast.error("Failed to load settings data");
-      console.error(error);
+      console.error('Failed to load system settings:', error);
+      toast.error('Failed to load system settings');
     } finally {
-      setLoading(false);
+      setIsLoadingSettings(false);
     }
   };
 
-  const getFilteredStaff = () => {
-    return staff.filter(member => {
-      const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter = filterStatus === 'all' || member.status.toLowerCase() === filterStatus.toLowerCase();
-      return matchesSearch && (filterStatus === 'all' || matchesFilter);
-    });
+  const loadStaff = async () => {
+    try {
+      setIsLoadingStaff(true);
+      const staffData = await adminService.getItems('staff') as AdminStaff[];
+      setStaff(staffData);
+    } catch (error) {
+      console.error('Failed to load staff:', error);
+      toast.error('Failed to load staff');
+    } finally {
+      setIsLoadingStaff(false);
+    }
   };
 
-  const handleToggleNotifications = async () => {
-    setLoading(true);
+  const handleSaveSettings = async () => {
     try {
-      const updatedSettings = await adminService.updateSystemSettings({
-        enableNotifications: !systemSettings.enableNotifications
-      });
-      
-      setSystemSettings(updatedSettings);
-      toast.success(`Notifications ${updatedSettings.enableNotifications ? 'enabled' : 'disabled'}`);
+      setSaving(true);
+      await adminService.updateSystemSettings(systemSettings);
+      toast.success('Settings saved successfully');
     } catch (error) {
-      toast.error("Failed to update notification settings");
-      console.error(error);
+      console.error('Failed to save settings:', error);
+      toast.error('Failed to save settings');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   const handleBackupData = async () => {
-    setLoading(true);
     try {
-      await adminService.backupData();
-      const updatedSettings = await adminService.getSystemSettings();
-      setSystemSettings(updatedSettings);
+      setIsBackingUp(true);
+      const result = await adminService.backupData();
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
     } catch (error) {
-      toast.error("Failed to backup data");
-      console.error(error);
+      console.error('Backup failed:', error);
+      toast.error('Backup failed');
     } finally {
-      setLoading(false);
+      setIsBackingUp(false);
     }
   };
 
   const handleResetSystem = async () => {
-    setLoading(true);
     try {
-      await adminService.resetSystem();
-      setConfirmResetOpen(false);
-      
-      // Refetch all data after reset
-      await fetchData();
-      toast.success("System has been reset successfully");
+      setIsResetting(true);
+      const result = await adminService.resetSystem();
+      if (result.success) {
+        toast.success(result.message);
+        setShowResetDialog(false);
+      } else {
+        toast.error(result.message);
+      }
     } catch (error) {
-      toast.error("Failed to reset system");
-      console.error(error);
+      console.error('System reset failed:', error);
+      toast.error('System reset failed');
     } finally {
-      setLoading(false);
+      setIsResetting(false);
     }
   };
 
-  const handleChangeTheme = async (theme: "light" | "dark" | "system") => {
-    setLoading(true);
-    try {
-      const updatedSettings = await adminService.updateSystemSettings({ theme });
-      setSystemSettings(updatedSettings);
-      toast.success(`Theme changed to ${theme}`);
-    } catch (error) {
-      toast.error("Failed to update theme");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+  // Handle theme switching
+  const handleThemeChange = (newTheme: "light" | "dark") => {
+    setTheme(newTheme);
+    toast.success(`Theme changed to ${newTheme}`);
   };
+
+  const filteredStaff = staff.filter(member => 
+    (member.name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+    (member.email?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+    (member.role?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+    (member.department?.toLowerCase().includes(searchQuery.toLowerCase()) || false)
+  );
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4">
-      <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-        <Settings className="h-5 w-5 text-primary" />
-        Admin Settings
-      </h2>
-      
-      <div className="space-y-6">
-        <div>
-          <h3 className="font-medium mb-3">User Management</h3>
-          
-          {loading ? (
-            <div className="flex justify-center items-center py-10">
-              <div className="flex flex-col items-center">
-                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-                <p className="mt-2 text-sm text-gray-500">Loading staff data...</p>
-              </div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {getFilteredStaff().length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">
-                        <p className="text-gray-500">No staff found matching your criteria</p>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    getFilteredStaff().map((member) => (
-                      <TableRow key={member.id}>
-                        <TableCell className="font-medium">{member.name}</TableCell>
-                        <TableCell>{member.role}</TableCell>
-                        <TableCell>{member.department}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            member.status === "Active" 
-                              ? "bg-green-100 text-green-800" 
-                              : member.status === "On Leave"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}>
-                            {member.status}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => toast.success(`Managing ${member.name}'s permissions`)}
-                          >
-                            Manage
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-        
-        <div className="border-t pt-4">
-          <h3 className="font-medium mb-3">App Settings</h3>
-          <div className="space-y-3">
-            <div className="p-3 border rounded-lg flex justify-between items-center">
-              <div className="flex items-center">
-                <Bell className="w-5 h-5 mr-2 text-gray-600" />
-                <span>Push Notifications</span>
-              </div>
-              <div className="flex gap-2 items-center">
-                <Switch 
-                  checked={systemSettings.enableNotifications} 
-                  onCheckedChange={handleToggleNotifications}
-                  disabled={loading}
-                />
-                <span className="text-sm text-gray-500">
-                  {systemSettings.enableNotifications ? 'Enabled' : 'Disabled'}
-                </span>
-              </div>
-            </div>
-            
-            <div className="p-3 border rounded-lg flex justify-between items-center">
-              <div className="flex items-center">
-                <Upload className="w-5 h-5 mr-2 text-gray-600" />
-                <span>Data Backups</span>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="text-sm text-gray-600">
-                  Last: {new Date(systemSettings.lastBackupDate).toLocaleString()}
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleBackupData}
-                  disabled={loading}
-                >
-                  Backup Now
-                </Button>
-              </div>
-            </div>
-            
-            <div className="p-3 border rounded-lg flex justify-between items-center">
-              <div className="flex items-center">
-                <Database className="w-5 h-5 mr-2 text-gray-600" />
-                <span>Database Management</span>
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => toast.success("Database management panel opened")}
-                >
-                  Manage
-                </Button>
-              </div>
-            </div>
-            
-            <div className="p-3 border rounded-lg flex justify-between items-center">
-              <div className="flex items-center">
-                <Shield className="w-5 h-5 mr-2 text-gray-600" />
-                <span>Security Settings</span>
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => toast.success("Security settings opened")}
-                >
-                  Configure
-                </Button>
-              </div>
-            </div>
-            
-            <div className="p-3 border rounded-lg flex justify-between items-center">
-              <div className="flex items-center">
-                <LayoutDashboard className="w-5 h-5 mr-2 text-gray-600" />
-                <span>Theme</span>
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant={systemSettings.theme === "light" ? "default" : "outline"} 
-                  size="sm"
-                  onClick={() => handleChangeTheme("light")}
-                  disabled={loading}
-                >
-                  Light
-                </Button>
-                <Button 
-                  variant={systemSettings.theme === "dark" ? "default" : "outline"} 
-                  size="sm"
-                  onClick={() => handleChangeTheme("dark")}
-                  disabled={loading}
-                >
-                  Dark
-                </Button>
-                <Button 
-                  variant={systemSettings.theme === "system" ? "default" : "outline"} 
-                  size="sm"
-                  onClick={() => handleChangeTheme("system")}
-                  disabled={loading}
-                >
-                  System
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="border-t pt-4">
-          <h3 className="font-medium mb-3 text-red-600">Danger Zone</h3>
-          <div className="space-y-3">
-            <div className="p-3 border border-red-200 bg-red-50 rounded-lg">
-              <h4 className="font-medium flex items-center gap-2 text-red-700">
-                <AlertTriangle className="h-4 w-4" />
-                Reset System
-              </h4>
-              <p className="text-sm text-red-600 mt-1 mb-2">
-                This action will reset all system data and cannot be undone.
-              </p>
-              <Dialog open={confirmResetOpen} onOpenChange={setConfirmResetOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="destructive" size="sm">
-                    Reset System
+    <div className="space-y-4">
+      <Tabs defaultValue="appearance" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 h-8">
+          <TabsTrigger value="appearance" className="text-xs h-6">Theme</TabsTrigger>
+          <TabsTrigger value="system" className="text-xs h-6">System</TabsTrigger>
+          <TabsTrigger value="staff" className="text-xs h-6">Staff</TabsTrigger>
+          <TabsTrigger value="maintenance" className="text-xs h-6">Maintenance</TabsTrigger>
+        </TabsList>
+
+        {/* Theme Settings */}
+        <TabsContent value="appearance" className="mt-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Appearance Settings</CardTitle>
+              <CardDescription className="text-xs">
+                Customize the theme and appearance of the admin panel
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <Label className="text-xs font-medium">Theme</Label>
+                <div className="flex gap-2">
+                  <Button
+                    variant={theme === "light" ? "default" : "outline"}
+                    size="sm"
+                    className="flex items-center gap-2 h-8 text-xs px-3"
+                    onClick={() => handleThemeChange("light")}
+                  >
+                    <Sun className="w-3 h-3" />
+                    Light
                   </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="text-red-600 flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5" />
-                      Confirm System Reset
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="py-4">
-                    <p className="text-gray-700 mb-4">
-                      Are you absolutely sure you want to reset the system? This action cannot be undone and will erase all data including:
-                    </p>
-                    <ul className="list-disc pl-5 space-y-1 text-sm text-gray-600 mb-4">
-                      <li>All animal records</li>
-                      <li>All event data</li>
-                      <li>All notification history</li>
-                      <li>All user settings</li>
-                    </ul>
-                    <div className="flex justify-end gap-2 mt-6">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setConfirmResetOpen(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button 
-                        variant="destructive" 
-                        onClick={handleResetSystem}
-                        disabled={loading}
-                      >
-                        {loading ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            Resetting...
-                          </>
-                        ) : (
-                          "Yes, Reset Everything"
-                        )}
-                      </Button>
+                  <Button
+                    variant={theme === "dark" ? "default" : "outline"}
+                    size="sm"
+                    className="flex items-center gap-2 h-8 text-xs px-3"
+                    onClick={() => handleThemeChange("dark")}
+                  >
+                    <Moon className="w-3 h-3" />
+                    Dark
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Current theme: <span className="font-medium capitalize">{theme}</span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* System Settings */}
+        <TabsContent value="system" className="mt-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">System Configuration</CardTitle>
+              <CardDescription className="text-xs">
+                General system settings and preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoadingSettings ? (
+                <div className="flex items-center justify-center py-6">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span className="text-xs ml-2">Loading settings...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="enableNotifications" className="text-xs font-medium">Enable Notifications</Label>
+                      <Switch
+                        id="enableNotifications"
+                        checked={systemSettings.enableNotifications}
+                        onCheckedChange={(checked) => setSystemSettings(prev => ({ ...prev, enableNotifications: checked }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastBackupDate" className="text-xs font-medium">Last Backup</Label>
+                      <Input
+                        id="lastBackupDate"
+                        value={new Date(systemSettings.lastBackupDate).toLocaleDateString()}
+                        disabled
+                        className="h-8 text-xs"
+                      />
                     </div>
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+
+                  <div className="pt-3">
+                    <Button 
+                      onClick={handleSaveSettings} 
+                      disabled={isSaving}
+                      className="w-full h-8 text-xs"
+                    >
+                      {isSaving ? (
+                        <>
+                          <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-3 h-3 mr-2" />
+                          Save Settings
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Staff Management */}
+        <TabsContent value="staff" className="mt-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Staff Directory</CardTitle>
+              <CardDescription className="text-xs">
+                Manage staff members and their roles
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingStaff ? (
+                <div className="flex items-center justify-center py-6">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span className="text-xs ml-2">Loading staff...</span>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs h-8">Name</TableHead>
+                      <TableHead className="text-xs h-8">Email</TableHead>
+                      <TableHead className="text-xs h-8">Role</TableHead>
+                      <TableHead className="text-xs h-8">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStaff.map((member) => (
+                      <TableRow key={member.id}>
+                        <TableCell className="text-xs py-2">
+                          {member.name}
+                        </TableCell>
+                        <TableCell className="text-xs py-2">{member.email || 'N/A'}</TableCell>
+                        <TableCell className="text-xs py-2">
+                          <Badge variant="secondary" className="text-xs h-5">
+                            {member.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs py-2">
+                          <Badge 
+                            variant={member.status === "Active" ? "default" : "secondary"}
+                            className="text-xs h-5"
+                          >
+                            {member.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Maintenance */}
+        <TabsContent value="maintenance" className="mt-3">
+          <div className="space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">System Maintenance</CardTitle>
+                <CardDescription className="text-xs">
+                  Backup and restore system data
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button 
+                  variant="outline" 
+                  onClick={handleBackupData}
+                  disabled={isBackingUp}
+                  className="w-full h-8 text-xs"
+                >
+                  {isBackingUp ? (
+                    <>
+                      <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
+                      Creating Backup...
+                    </>
+                  ) : (
+                    <>Create Backup</>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-red-200 dark:border-red-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-red-600 dark:text-red-400">
+                  Danger Zone
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Irreversible and destructive actions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setShowResetDialog(true)}
+                  className="w-full h-8 text-xs"
+                >
+                  <AlertTriangle className="w-3 h-3 mr-2" />
+                  Reset System
+                </Button>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Reset Confirmation Dialog */}
+      <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Confirm System Reset</DialogTitle>
+            <DialogDescription className="text-xs">
+              This will permanently delete ALL data including animals, events, notifications, and settings. 
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowResetDialog(false)}
+              className="h-8 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleResetSystem}
+              disabled={isResetting}
+              className="h-8 text-xs"
+            >
+              {isResetting ? (
+                <>
+                  <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
+                  Resetting...
+                </>
+              ) : (
+                'Reset System'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

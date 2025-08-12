@@ -1,4 +1,3 @@
-
 import { ChevronLeft, Settings } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
@@ -62,7 +61,7 @@ const PageHeader = ({
 
         {showUserAvatar && (
           <Link to="/profile">
-            <UserAvatar size="sm" />
+            <UserAvatar size="sm" disableLink />
           </Link>
         )}
       </div>

@@ -1,6 +1,6 @@
-
 import { AdminNotification } from "@/types/admin";
 import { mockDatabase, simulateAPI } from "@/utils/adminUtils";
+import { userService } from "./userService";
 import { toast } from "sonner";
 
 // Define a type for our internal notification management (extends AdminNotification with tracking fields)
@@ -11,7 +11,37 @@ type InternalNotification = Omit<AdminNotification, 'message'> & {
     createdAt?: string;
     updatedAt?: string;
     sentAt?: string;
+    deliveredTo?: string[];
+    readBy?: string[];
+    failedDelivery?: string[];
   };
+};
+
+// Enhanced delivery types
+interface NotificationDelivery {
+  id: string;
+  notificationId: string;
+  userId: string;
+  deliveredAt: string;
+  readAt?: string;
+  method: 'push' | 'in-app' | 'email' | 'sms';
+  status: 'pending' | 'delivered' | 'read' | 'failed';
+}
+
+interface PushSubscription {
+  userId: string;
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  createdAt: string;
+}
+
+// Mock storage for deliveries and subscriptions
+const deliveryStorage = {
+  deliveries: [] as NotificationDelivery[],
+  subscriptions: [] as PushSubscription[],
 };
 
 // Define internal database type that requires message
@@ -29,6 +59,9 @@ type InternalDatabaseNotification = {
     createdAt?: string;
     updatedAt?: string;
     sentAt?: string;
+    deliveredTo?: string[];
+    readBy?: string[];
+    failedDelivery?: string[];
   };
 };
 
@@ -220,7 +253,211 @@ export const notificationService = {
     
     toast.success(`Notification "${notification.title}" scheduled for ${formattedDate}`);
     return simulateAPI(validNotification);
-  }
+  },
+
+  // Enhanced notification delivery methods
+  deliverNotification: async (notificationId: string, userId?: string): Promise<boolean> => {
+    console.log(`Delivering notification ${notificationId} to user ${userId || 'all users'}`);
+    
+    try {
+      const notification = mockDatabase.notifications.find(n => n.id === notificationId) as InternalDatabaseNotification | undefined;
+      if (!notification) {
+        throw new Error('Notification not found');
+      }
+
+      const currentUser = userService.getCurrentUser();
+      const targetUsers = userId ? [userId] : (currentUser ? [currentUser.id] : ['guest']);
+      
+      // Create delivery records
+      const deliveries: NotificationDelivery[] = targetUsers.map(uId => ({
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        notificationId,
+        userId: uId,
+        deliveredAt: new Date().toISOString(),
+        method: 'in-app' as const,
+        status: 'delivered' as const,
+      }));
+
+      deliveryStorage.deliveries.push(...deliveries);
+
+      // Update notification metadata
+      if (!notification._metadata) notification._metadata = {};
+      if (!notification._metadata.deliveredTo) notification._metadata.deliveredTo = [];
+      notification._metadata.deliveredTo.push(...targetUsers);
+
+      // Trigger real-time delivery
+      await simulateRealTimeDelivery(notification, targetUsers);
+
+      return true;
+    } catch (error) {
+      console.error('Failed to deliver notification:', error);
+      return false;
+    }
+  },
+
+  // Push notification subscription management
+  subscribeToPush: async (subscription: Omit<PushSubscription, 'createdAt'>): Promise<boolean> => {
+    console.log('Subscribing to push notifications');
+    
+    try {
+      const existingIndex = deliveryStorage.subscriptions.findIndex(
+        s => s.userId === subscription.userId
+      );
+
+      const pushSubscription: PushSubscription = {
+        ...subscription,
+        createdAt: new Date().toISOString(),
+      };
+
+      if (existingIndex >= 0) {
+        deliveryStorage.subscriptions[existingIndex] = pushSubscription;
+      } else {
+        deliveryStorage.subscriptions.push(pushSubscription);
+      }
+
+      toast.success('Push notifications enabled');
+      return true;
+    } catch (error) {
+      console.error('Failed to subscribe to push notifications:', error);
+      toast.error('Failed to enable push notifications');
+      return false;
+    }
+  },
+
+  unsubscribeFromPush: async (userId: string): Promise<boolean> => {
+    console.log(`Unsubscribing user ${userId} from push notifications`);
+    
+    try {
+      const index = deliveryStorage.subscriptions.findIndex(s => s.userId === userId);
+      if (index >= 0) {
+        deliveryStorage.subscriptions.splice(index, 1);
+        toast.success('Push notifications disabled');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to unsubscribe from push notifications:', error);
+      return false;
+    }
+  },
+
+  // Get user-specific notifications
+  getUserNotifications: async (userId?: string): Promise<AdminNotification[]> => {
+    console.log(`Fetching notifications for user: ${userId || 'current user'}`);
+    
+    try {
+      const currentUser = userService.getCurrentUser();
+      const targetUserId = userId || currentUser?.id || 'guest';
+      
+      // Get user's delivered notifications
+      const userDeliveries = deliveryStorage.deliveries.filter(d => d.userId === targetUserId);
+      const notificationIds = userDeliveries.map(d => d.notificationId);
+      
+      // Get all notifications that were delivered to this user
+      const userNotifications = mockDatabase.notifications
+        .filter(n => notificationIds.includes(n.id) || n.recipients === 'all')
+        .map(n => ensureValidNotification(n as InternalNotification));
+
+      return simulateAPI(userNotifications);
+    } catch (error) {
+      console.error('Failed to fetch user notifications:', error);
+      return [];
+    }
+  },
+
+  // Mark notification as read
+  markAsRead: async (notificationId: string, userId?: string): Promise<boolean> => {
+    console.log(`Marking notification ${notificationId} as read`);
+    
+    try {
+      const currentUser = userService.getCurrentUser();
+      const targetUserId = userId || currentUser?.id || 'guest';
+      
+      const delivery = deliveryStorage.deliveries.find(
+        d => d.notificationId === notificationId && d.userId === targetUserId
+      );
+      
+      if (delivery && !delivery.readAt) {
+        delivery.readAt = new Date().toISOString();
+        delivery.status = 'read';
+        
+        // Update notification metadata
+        const notification = mockDatabase.notifications.find(n => n.id === notificationId) as InternalDatabaseNotification | undefined;
+        if (notification) {
+          if (!notification._metadata) notification._metadata = {};
+          if (!notification._metadata.readBy) notification._metadata.readBy = [];
+          if (!notification._metadata.readBy.includes(targetUserId)) {
+            notification._metadata.readBy.push(targetUserId);
+          }
+        }
+        
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      return false;
+    }
+  },
+
+  // Get unread notification count
+  getUnreadCount: async (userId?: string): Promise<number> => {
+    try {
+      const currentUser = userService.getCurrentUser();
+      const targetUserId = userId || currentUser?.id || 'guest';
+      
+      const unreadCount = deliveryStorage.deliveries.filter(
+        d => d.userId === targetUserId && !d.readAt
+      ).length;
+      
+      return unreadCount;
+    } catch (error) {
+      console.error('Failed to get unread count:', error);
+      return 0;
+    }
+  },
+
+  // Batch operations
+  markAllAsRead: async (userId?: string): Promise<boolean> => {
+    console.log('Marking all notifications as read');
+    
+    try {
+      const currentUser = userService.getCurrentUser();
+      const targetUserId = userId || currentUser?.id || 'guest';
+      
+      const userDeliveries = deliveryStorage.deliveries.filter(
+        d => d.userId === targetUserId && !d.readAt
+      );
+      
+      const now = new Date().toISOString();
+      userDeliveries.forEach(delivery => {
+        delivery.readAt = now;
+        delivery.status = 'read';
+      });
+      
+      toast.success('All notifications marked as read');
+      return true;
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+      return false;
+    }
+  },
+
+  // Real-time notification delivery simulation
+  setupRealTimeDelivery: () => {
+    console.log('Setting up real-time notification delivery');
+    
+    // In a real app, this would connect to WebSocket or Server-Sent Events
+    // For now, we'll simulate with periodic checks
+    return {
+      start: () => {
+        console.log('Real-time delivery started');
+      },
+      stop: () => {
+        console.log('Real-time delivery stopped');
+      }
+    };
+  },
 };
 
 /**
@@ -246,3 +483,48 @@ function ensureValidNotification(notification: Partial<AdminNotification> & { id
   
   return validNotification;
 }
+
+// Simulate real-time delivery
+const simulateRealTimeDelivery = async (
+  notification: InternalDatabaseNotification,
+  userIds: string[]
+): Promise<void> => {
+  // Simulate delivery delay
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // Show in-app notification for current user
+  const currentUser = userService.getCurrentUser();
+  if (currentUser && userIds.includes(currentUser.id)) {
+    // Determine notification type based on content
+    const isUrgent = notification.priority === 'High' || 
+                    notification.title.toLowerCase().includes('urgent') ||
+                    notification.title.toLowerCase().includes('emergency');
+    
+    if (isUrgent) {
+      toast.error(notification.title, {
+        description: notification.message,
+        duration: 8000,
+      });
+    } else {
+      toast.info(notification.title, {
+        description: notification.message,
+        duration: 5000,
+      });
+    }
+  }
+  
+  // Simulate push notification (in real app, would use service worker)
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification(notification.title, {
+        body: notification.message,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: notification.id,
+        requireInteraction: notification.priority === 'High',
+      });
+    } catch (error) {
+      console.warn('Failed to show browser notification:', error);
+    }
+  }
+};

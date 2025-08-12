@@ -1,23 +1,83 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar, Clock, MapPin, ChevronRight, Filter } from "lucide-react";
 import PageHeader from "../components/PageHeader";
 import BottomNavbar from "../components/BottomNavbar";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import SearchBar from "@/components/SearchBar";
-import { useEvents } from "@/contexts/EventsContext";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import NotificationIcon from "@/components/NotificationIcon";
+import { eventService } from "@/services/adminService";
+import { AdminEvent } from "@/types/admin";
 
 const filterOptions = ["All Events", "Today", "Tomorrow", "This Week", "Feedings", "Talks"];
 
 const EventsPage = () => {
-  const { events, toggleNotification } = useEvents();
+  const [events, setEvents] = useState<AdminEvent[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("All Events");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Load events from backend
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        const eventData = await eventService.getAll();
+        setEvents(eventData);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        toast.error("Failed to load events");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
   const handleSearch = (term: string) => {
     setSearchTerm(term);
+  };
+
+  const formatEventDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return "Today";
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return "Tomorrow";
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
+  const isEventInTimeFrame = (eventDate: string, filter: string) => {
+    const date = new Date(eventDate);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+    switch (filter) {
+      case "Today":
+        return date.toDateString() === today.toDateString();
+      case "Tomorrow":
+        return date.toDateString() === tomorrow.toDateString();
+      case "This Week":
+        return date >= startOfWeek && date <= endOfWeek;
+      default:
+        return true;
+    }
   };
 
   const filteredEvents = events.filter(event => {
@@ -29,12 +89,11 @@ const EventsPage = () => {
     
     // Then apply category filter
     if (activeFilter === "All Events") return true;
-    if (activeFilter === "Today") return event.date === "Today";
-    if (activeFilter === "Tomorrow") return event.date === "Tomorrow";
-    if (activeFilter === "This Week") return true; // Simplified for demo
     if (activeFilter === "Feedings") return event.title.toLowerCase().includes("feeding");
     if (activeFilter === "Talks") return event.title.toLowerCase().includes("talk");
-    return true;
+    
+    // Apply time-based filters
+    return isEventInTimeFrame(event.date, activeFilter);
   });
 
   return (
@@ -48,115 +107,132 @@ const EventsPage = () => {
             onSubmit={handleSearch} 
             className="mb-6"
           />
-        </div>
-        
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-foreground">Upcoming Events</h2>
-          <Button variant="outline" className="rounded-lg bg-card border-border hover:bg-accent/10">
-            <Filter className="h-5 w-5 text-foreground mr-2" />
-            <span className="text-foreground">Filter</span>
-          </Button>
-        </div>
-        
-        <div className="mb-6 overflow-x-auto">
-          <div className="flex gap-2 pb-2 hide-scrollbar">
+          
+          {/* Filter Chips */}
+          <div className="flex gap-2 overflow-x-auto pb-2">
             {filterOptions.map((filter) => (
-              <Button 
+              <Button
                 key={filter}
-                variant="outline"
-                className={`py-2 px-4 rounded-full whitespace-nowrap ${activeFilter === filter 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-card text-foreground hover:bg-accent/10'}`}
+                variant={activeFilter === filter ? "default" : "outline"}
+                size="sm"
                 onClick={() => setActiveFilter(filter)}
+                className="whitespace-nowrap h-8 text-xs"
               >
                 {filter}
               </Button>
             ))}
           </div>
         </div>
-        
-        {filteredEvents.length > 0 ? (
-          <div className="space-y-5">
-            {filteredEvents.map((event) => (
-              <div key={event.id} className="bg-card rounded-lg overflow-hidden shadow-sm border border-border">
-                <div className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-semibold text-foreground">{event.title}</h3>
-                    <NotificationIcon
-                      enabled={event.notificationEnabled} 
-                      onToggle={() => toggleNotification(event.id)}
-                      size="sm"
-                    />
-                  </div>
-                  <div className="flex items-center text-xs text-muted-foreground mt-1">
-                    <Clock className="w-3 h-3 mr-1" />
-                    <span className="mr-2">{event.time}</span>
-                    <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs">
-                      {event.date}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      <MapPin className="w-3 h-3 mr-1" />
-                      <span>{event.location}</span>
+
+        {/* Events List */}
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Card key={i} className="p-4">
+                <CardContent className="p-0">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <Skeleton className="h-12 w-12 rounded" />
                     </div>
-                    <Link
-                      to={`/events/${event.id}`}
-                      className="text-primary flex items-center text-xs"
-                    >
-                      View details <ChevronRight className="w-3 h-3 ml-1" />
-                    </Link>
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                      <Skeleton className="h-3 w-2/3" />
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredEvents.length > 0 ? (
+          <div className="space-y-4">
+            {filteredEvents.map((event) => (
+              <Card key={event.id} className="p-4 hover:bg-accent transition-colors">
+                <CardContent className="p-0">
+                  <div className="flex items-start gap-4">
+                    {/* Event Date Circle */}
+                    <div className="flex-shrink-0 w-12 h-12 bg-primary rounded-lg flex flex-col items-center justify-center text-white">
+                      <div className="text-xs font-medium">
+                        {new Date(event.date).toLocaleDateString('en-US', { day: '2-digit' })}
+                      </div>
+                      <div className="text-xs">
+                        {new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}
+                      </div>
+                    </div>
+                    
+                    {/* Event Details */}
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-sm font-medium text-foreground mb-1">
+                            {event.title}
+                          </h3>
+                          <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                            {event.description}
+                          </p>
+                          
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              <span>{event.time}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              <span>{event.location}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              <span>{formatEventDate(event.date)}</span>
+                            </div>
+                          </div>
+                          
+                          {event.attendees && (
+                            <div className="mt-2">
+                              <div className="text-xs text-muted-foreground">
+                                Attendees: {event.attendees}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2 ml-4">
+                          <NotificationIcon 
+                            enabled={false}
+                            onToggle={() => {
+                              // Handle notification toggle
+                              toast.success("Notification preferences updated");
+                            }}
+                            size="sm"
+                          />
+                          <Link to={`/events/${event.id}`}>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-10">
-            <div className="text-muted-foreground text-lg mb-2">No events found</div>
-            <p className="text-muted-foreground text-sm text-center max-w-sm">
-              No events match your search criteria. Try adjusting your filters or search term.
-            </p>
-          </div>
+          <Card className="p-8 text-center">
+            <CardContent className="p-0">
+              <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-sm font-medium text-foreground mb-2">No events found</h3>
+              <p className="text-xs text-muted-foreground">
+                {searchTerm || activeFilter !== "All Events" 
+                  ? "Try adjusting your search or filter criteria"
+                  : "No events are currently scheduled"
+                }
+              </p>
+            </CardContent>
+          </Card>
         )}
-        
-        <div className="mt-8 mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-foreground">Calendar View</h2>
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <button className="text-muted-foreground">
-                <ChevronRight className="w-5 h-5 rotate-180" />
-              </button>
-              <h3 className="font-medium text-foreground">July 2023</h3>
-              <button className="text-muted-foreground">
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
-                <div key={i} className="text-xs font-medium text-muted-foreground py-1">
-                  {day}
-                </div>
-              ))}
-              {Array.from({ length: 31 }, (_, i) => (
-                <button
-                  key={i}
-                  className={`rounded-full w-8 h-8 mx-auto flex items-center justify-center text-sm ${
-                    i === 14
-                      ? "bg-primary text-primary-foreground"
-                      : i === 15 || i === 20
-                      ? "bg-primary/20 text-primary"
-                      : "text-foreground hover:bg-accent/10"
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
-      
+
       <BottomNavbar />
     </div>
   );

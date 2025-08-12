@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Settings, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import UserAvatar from "./UserAvatar";
 import { NotificationBell } from "./NotificationBell";
@@ -26,7 +26,7 @@ const AppHeader = ({
   actionItems,
 }: AppHeaderProps) => {
   const { user } = useAuth();
-  const isAdmin = localStorage.getItem("isAdmin") === "true";
+  const isAdmin = user?.isAdmin || false;
 
   return (
     <div>
@@ -45,13 +45,6 @@ const AppHeader = ({
             <span>Admin</span>
           </Link>
         )}
-        
-        <Link 
-          to="/settings" 
-          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-muted"
-        >
-          <Settings className="w-5 h-5 text-foreground" />
-        </Link>
         
         <Link 
           to="/profile" 

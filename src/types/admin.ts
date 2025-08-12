@@ -1,9 +1,8 @@
-
 export interface AdminAnimal {
   id: string;
   name: string;
   species?: string;
-  location: string;
+  location?: string | { lat: number; lng: number };
   status: "Healthy" | "Under observation" | "Scheduled for checkup" | "Treatment required";
   lastCheckup: string;
   nextCheckup?: string;

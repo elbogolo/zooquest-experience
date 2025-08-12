@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Edit, Trash2, Image, Calendar, RefreshCw, Plus, Clock, MapPin } from "lucide-react";
+import { Edit, Trash2, Image, Calendar, RefreshCw, Plus, Clock, MapPin, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,11 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { adminService, AdminEvent } from "@/services/adminService";
+import { adminService, eventService } from "@/services/adminService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useEvents } from "@/contexts/EventsContext";
+import type { AdminEvent } from "@/types/admin";
 
 interface EventManagementProps {
   searchQuery: string;
@@ -50,7 +51,7 @@ const EventManagement = ({ searchQuery, filterStatus }: EventManagementProps) =>
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      const data = await adminService.getItems<AdminEvent>("events");
+      const data = await eventService.getAll();
       setEvents(data);
     } catch (error) {
       toast.error("Failed to load events");
@@ -82,61 +83,78 @@ const EventManagement = ({ searchQuery, filterStatus }: EventManagementProps) =>
     });
   };
 
+  const openEventEditor = (event?: AdminEvent) => {
+    if (event) {
+      setSelectedEvent(event);
+      setEventData({
+        title: event.title,
+        date: event.date,
+        time: event.time,
+        location: event.location,
+        description: event.description || "",
+        imageUrl: event.imageUrl,
+        duration: event.duration,
+        host: event.host,
+        status: event.status,
+        attendees: event.attendees || 0
+      });
+      setIsEditing(true);
+    } else {
+      setSelectedEvent(null);
+      resetEventData();
+      setIsEditing(false);
+    }
+    setEventEditorOpen(true);
+  };
+
   const handleAddEvent = async () => {
-    if (!eventData.title) {
-      toast.error("Event title is required");
+    if (!eventData.title?.trim()) {
+      toast.error("Please enter an event title");
       return;
     }
 
     setLoading(true);
     try {
-      const createdEvent = await adminService.createItem<AdminEvent>("events", eventData);
-      setEvents([...events, createdEvent]);
+      const newEvent = await eventService.create(eventData);
+      setEvents([...events, newEvent]);
       
-      // Update the events context
+      // Add to events context
       addEvent({
-        title: createdEvent.title,
-        date: createdEvent.date,
-        time: createdEvent.time,
-        location: createdEvent.location,
-        description: createdEvent.description || "",
-        image: createdEvent.imageUrl,
-        duration: createdEvent.duration,
-        host: createdEvent.host,
+        title: newEvent.title,
+        date: newEvent.date,
+        time: newEvent.time,
+        location: newEvent.location,
+        description: newEvent.description || "",
+        image: newEvent.imageUrl,
+        duration: newEvent.duration,
+        host: newEvent.host,
         notificationEnabled: false
       });
       
-      resetEventData();
+      toast.success(`Event "${newEvent.title}" created successfully`);
       setEventEditorOpen(false);
-      toast.success(`${createdEvent.title} added successfully`);
+      resetEventData();
     } catch (error) {
-      toast.error("Failed to add event");
+      toast.error("Failed to create event");
       console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEditEvent = async () => {
-    if (!selectedEvent) return;
-    if (!eventData.title) {
-      toast.error("Event title is required");
+  const handleUpdateEvent = async () => {
+    if (!selectedEvent || !eventData.title?.trim()) {
+      toast.error("Please enter an event title");
       return;
     }
 
     setLoading(true);
     try {
-      const updatedEvent = await adminService.updateItem<AdminEvent>(
-        "events", 
-        selectedEvent.id, 
-        eventData
-      );
-      
+      const updatedEvent = await eventService.update(selectedEvent.id, eventData);
       setEvents(events.map(e => e.id === selectedEvent.id ? updatedEvent : e));
       
-      // Update the events context
+      // Update in events context
       updateEvent(selectedEvent.id, {
-        id: updatedEvent.id,
         title: updatedEvent.title,
         date: updatedEvent.date,
         time: updatedEvent.time,
@@ -148,59 +166,34 @@ const EventManagement = ({ searchQuery, filterStatus }: EventManagementProps) =>
         notificationEnabled: false
       });
       
+      toast.success(`Event "${updatedEvent.title}" updated successfully`);
       setEventEditorOpen(false);
-      toast.success(`${updatedEvent.title} updated successfully`);
+      setSelectedEvent(null);
+      resetEventData();
     } catch (error) {
       toast.error("Failed to update event");
       console.error(error);
     } finally {
       setLoading(false);
-      setSelectedEvent(null);
-      setIsEditing(false);
     }
   };
 
-  const handleDeleteEvent = async (id: string) => {
-    if (confirm("Are you sure you want to delete this event?")) {
-      setLoading(true);
-      try {
-        await adminService.deleteItem("events", id);
-        setEvents(events.filter(e => e.id !== id));
-        
-        // Update the events context
-        deleteEvent(id);
-        
-        toast.success("Event deleted successfully");
-      } catch (error) {
-        toast.error("Failed to delete event");
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
+  const handleDeleteEvent = async (event: AdminEvent) => {
+    setLoading(true);
+    try {
+      await eventService.delete(event.id);
+      setEvents(events.filter(e => e.id !== event.id));
+      
+      // Remove from events context
+      deleteEvent(event.id);
+      
+      toast.success(`Event "${event.title}" deleted successfully`);
+    } catch (error) {
+      toast.error("Failed to delete event");
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const openEventEditor = (event?: AdminEvent) => {
-    if (event) {
-      setSelectedEvent(event);
-      setEventData({
-        title: event.title,
-        date: event.date,
-        time: event.time,
-        location: event.location,
-        description: event.description || "",
-        duration: event.duration || "30 minutes",
-        host: event.host || "Zoo Staff",
-        status: event.status || "Scheduled",
-        attendees: event.attendees || 0
-      });
-      setIsEditing(true);
-    } else {
-      setSelectedEvent(null);
-      resetEventData();
-      setIsEditing(false);
-    }
-    setEventEditorOpen(true);
   };
 
   const handleUploadImage = (id: string) => {
@@ -219,14 +212,10 @@ const EventManagement = ({ searchQuery, filterStatus }: EventManagementProps) =>
     setLoading(true);
     
     try {
-      const imageUrl = await adminService.uploadImage(file, "events", selectedEvent.id);
+      const imageData = await adminService.uploadEventImage(selectedEvent.id, file);
       
       // Update the event with the new image URL
-      const updatedEvent = await adminService.updateItem<AdminEvent>(
-        "events",
-        selectedEvent.id,
-        { imageUrl }
-      );
+      const updatedEvent = await eventService.update(selectedEvent.id, { imageUrl: imageData.imageUrl });
       
       setEvents(events.map(e => e.id === selectedEvent.id ? updatedEvent : e));
       toast.success(`Image for ${selectedEvent.title} uploaded successfully`);
@@ -236,7 +225,7 @@ const EventManagement = ({ searchQuery, filterStatus }: EventManagementProps) =>
       if (contextEvent) {
         updateEvent(selectedEvent.id, {
           ...contextEvent,
-          image: imageUrl
+          image: imageData.imageUrl
         });
       }
     } catch (error) {
@@ -252,155 +241,122 @@ const EventManagement = ({ searchQuery, filterStatus }: EventManagementProps) =>
   };
 
   return (
-    <div className="bg-card dark:bg-card border border-border rounded-xl shadow-sm p-4">
-      <h2 className="text-lg font-semibold mb-3 flex items-center gap-2 text-foreground">
-        <Calendar className="h-5 w-5 text-primary" />
-        Events Management
-      </h2>
-      
-      <div className="mb-4 border border-border rounded-lg p-3 bg-muted/30 dark:bg-muted/10">
-        <h3 className="text-md font-medium mb-2 text-foreground">Quick Add Event</h3>
+    <div className="space-y-4">
+      {/* Add New Event Button */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-sm font-medium text-foreground">Event Directory</h2>
         <Button 
           onClick={() => openEventEditor()}
-          className="gap-1"
+          size="sm" 
+          className="h-8 text-xs px-3"
         >
-          <Plus className="h-4 w-4" />
-          Add New Event
+          <Plus className="w-3 h-3 mr-1" />
+          Add Event
         </Button>
       </div>
-      
-      <div className="mb-4 flex justify-end">
-        <Button 
-          variant="outline"
-          className="flex items-center justify-center gap-2"
-          onClick={() => {
-            if (events.length === 0) {
-              toast.error("Add events first to manage them");
-              return;
-            }
-            toast.info("Select an event from the list to edit it");
-          }}
-        >
-          <Calendar className="w-4 h-4" />
-          <span>Manage Schedule</span>
-        </Button>
-        <Button 
-          variant="outline"
-          className="flex items-center justify-center gap-2"
-          onClick={() => {
-            if (events.length === 0) {
-              toast.error("Add events first before promoting them");
-              return;
-            }
-            toast.info("Feature to promote events coming soon");
-          }}
-        >
-          <MapPin className="w-4 h-4" />
-          <span>Promote Events</span>
-        </Button>
-      </div>
-      
-      <div className="overflow-x-auto">
-        <Table className="border-collapse w-full">
+
+      {/* Events Table */}
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="text-xs h-8 w-12">Image</TableHead>
+              <TableHead className="text-xs h-8">Event</TableHead>
+              <TableHead className="text-xs h-8 hidden sm:table-cell">Date/Time</TableHead>
+              <TableHead className="text-xs h-8 hidden md:table-cell">Location</TableHead>
+              <TableHead className="text-xs h-8">Status</TableHead>
+              <TableHead className="text-xs h-8 w-20">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <div className="flex justify-center">
-                    <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+                <TableCell colSpan={6} className="text-center py-6">
+                  <div className="flex items-center justify-center">
+                    <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                    <span className="text-xs">Loading events...</span>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">Loading events data...</p>
                 </TableCell>
               </TableRow>
             ) : getFilteredEvents().length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <p className="text-muted-foreground">No events found matching your criteria</p>
+                <TableCell colSpan={6} className="text-center py-6">
+                  <p className="text-xs text-muted-foreground">No events found</p>
                 </TableCell>
               </TableRow>
             ) : (
               getFilteredEvents().map((event) => (
                 <TableRow key={event.id}>
-                  <TableCell className="font-medium text-foreground">
-                    <div className="flex items-center gap-2">
-                      {event.imageUrl && (
-                        <div className="w-8 h-8 rounded-full overflow-hidden">
-                          <img 
-                            src={event.imageUrl} 
-                            alt={event.title}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                      {event.title}
+                  <TableCell className="p-2">
+                    <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                      {event.imageUrl ? (
+                        <img 
+                          src={event.imageUrl} 
+                          alt={event.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
+                      <Calendar className="w-3 h-3 text-muted-foreground" />
                     </div>
                   </TableCell>
-                  <TableCell className="text-foreground">{event.date}</TableCell>
-                  <TableCell className="text-foreground">{event.time}</TableCell>
-                  <TableCell className="text-foreground">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                  <TableCell className="py-2">
+                    <div>
+                      <p className="text-xs font-medium">{event.title}</p>
+                      <p className="text-xs text-muted-foreground">{event.host}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs py-2 hidden sm:table-cell">
+                    <div>
+                      <p className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {event.date}
+                      </p>
+                      <p className="flex items-center gap-1 text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        {event.time}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs py-2 hidden md:table-cell">
+                    <p className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
                       {event.location}
-                    </div>
+                    </p>
                   </TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
+                  <TableCell className="py-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
                       event.status === "Scheduled" 
-                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200" 
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                         : event.status === "Ongoing"
-                        ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                         : event.status === "Completed"
-                        ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200"
-                        : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200"
+                        ? "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                     }`}>
-                      {event.status || "Scheduled"}
+                      {event.status}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
+                  <TableCell className="py-2">
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
                         size="sm"
-                        onClick={() => handleUploadImage(event.id)}
-                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                        className="h-6 w-6 p-0"
+                        onClick={() => openEventEditor(event)}
                       >
-                        <Image className="h-4 w-4" />
-                        <span className="sr-only">Upload Image</span>
+                        <Edit className="w-3 h-3" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setSelectedEvent(event);
-                          setEventData({
-                            ...event
-                          });
-                          setIsEditing(true);
-                          setEventEditorOpen(true);
-                        }}
-                        className="h-8 w-8 p-0 hover:bg-muted/60 dark:hover:bg-muted/20"
+                        className="h-6 w-6 p-0"
+                        onClick={() => handleDeleteEvent(event)}
                       >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDeleteEvent(event.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
                   </TableCell>
@@ -411,93 +367,147 @@ const EventManagement = ({ searchQuery, filterStatus }: EventManagementProps) =>
         </Table>
       </div>
       
-      <input 
-        type="file" 
-        ref={fileInputRef}
-        className="hidden"
-        accept="image/*"
-        onChange={handleFileChange}
-      />
-      
       {/* Event Editor Dialog */}
       <Dialog open={eventEditorOpen} onOpenChange={setEventEditorOpen}>
-        <DialogContent className="w-full max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>{ isEditing ? "Edit Event" : "Add New Event" }</DialogTitle>
+        <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-6 border-b border-border">
+            <DialogTitle className="text-lg font-bold text-foreground">
+              {isEditing ? "Edit Event" : "Add New Event"}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              {isEditing ? "Update event information and settings" : "Create a new zoo event with all necessary details"}
+            </p>
           </DialogHeader>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-            <div className="space-y-3 text-foreground col-span-2">
-              <div>
-                <Label htmlFor="event-title" className="text-foreground">Event Title</Label>
-                <Input
-                  id="event-title"
-                  value={eventData.title || ""}
-                  onChange={(e) => setEventData({...eventData, title: e.target.value})}
-                  placeholder="Enter event title"
-                />
-              </div>
+          <div className="py-6 space-y-6">
+            {/* Basic Information Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-primary" />
+                Basic Information
+              </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3">
                 <div>
-                  <Label htmlFor="event-date" className="text-foreground">Date</Label>
+                  <Label htmlFor="event-title" className="text-xs font-medium text-foreground mb-1.5 block">
+                    Event Title *
+                  </Label>
                   <Input
-                    id="event-date"
-                    value={eventData.date || ""}
-                    onChange={(e) => setEventData({...eventData, date: e.target.value})}
-                    placeholder="Event date"
+                    id="event-title"
+                    value={eventData.title || ""}
+                    onChange={(e) => setEventData({...eventData, title: e.target.value})}
+                    placeholder="Enter event title (e.g., Lion Feeding Time)"
+                    className="text-xs h-8"
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="event-time" className="text-foreground">Time</Label>
+                  <Label htmlFor="event-description" className="text-xs font-medium text-foreground mb-1.5 block">
+                    Description
+                  </Label>
+                  <textarea
+                    id="event-description"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[80px] text-xs text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    value={eventData.description || ""}
+                    onChange={(e) => setEventData({...eventData, description: e.target.value})}
+                    placeholder="Describe the event, what visitors can expect, and any special information..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Schedule & Location Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                Schedule & Location
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="event-date" className="text-xs font-medium text-foreground mb-1.5 block">
+                    Date *
+                  </Label>
+                  <Input
+                    id="event-date"
+                    type="date"
+                    value={eventData.date ? new Date(eventData.date).toISOString().split('T')[0] : ""}
+                    onChange={(e) => setEventData({...eventData, date: e.target.value})}
+                    className="text-xs h-8"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="event-time" className="text-xs font-medium text-foreground mb-1.5 block">
+                    Time *
+                  </Label>
                   <Input
                     id="event-time"
+                    type="time"
                     value={eventData.time || ""}
                     onChange={(e) => setEventData({...eventData, time: e.target.value})}
-                    placeholder="Event time"
+                    className="text-xs h-8"
                   />
                 </div>
               </div>
               
-              <div>
-                <Label htmlFor="event-location" className="text-foreground">Location</Label>
-                <Input
-                  id="event-location"
-                  value={eventData.location || ""}
-                  onChange={(e) => setEventData({...eventData, location: e.target.value})}
-                  placeholder="Event location"
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="event-duration" className="text-foreground">Duration</Label>
+                  <Label htmlFor="event-location" className="text-xs font-medium text-foreground mb-1.5 block">
+                    Location *
+                  </Label>
+                  <Input
+                    id="event-location"
+                    value={eventData.location || ""}
+                    onChange={(e) => setEventData({...eventData, location: e.target.value})}
+                    placeholder="e.g., Lion Enclosure, Main Amphitheater"
+                    className="text-xs h-8"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="event-duration" className="text-xs font-medium text-foreground mb-1.5 block">
+                    Duration
+                  </Label>
                   <Input
                     id="event-duration"
                     value={eventData.duration || ""}
                     onChange={(e) => setEventData({...eventData, duration: e.target.value})}
-                    placeholder="Duration (e.g. 30 minutes)"
+                    placeholder="e.g., 30 minutes, 1 hour"
+                    className="text-xs h-8"
                   />
                 </div>
-                
+              </div>
+            </div>
+
+            {/* Event Management Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" />
+                Event Management
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <Label htmlFor="event-host" className="text-foreground">Host</Label>
+                  <Label htmlFor="event-host" className="text-xs font-medium text-foreground mb-1.5 block">
+                    Host/Staff
+                  </Label>
                   <Input
                     id="event-host"
                     value={eventData.host || ""}
                     onChange={(e) => setEventData({...eventData, host: e.target.value})}
-                    placeholder="Event host"
+                    placeholder="Staff member or department"
+                    className="text-xs h-8"
                   />
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
                 <div>
-                  <Label htmlFor="event-status" className="text-foreground">Status</Label>
+                  <Label htmlFor="event-status" className="text-xs font-medium text-foreground mb-1.5 block">
+                    Status
+                  </Label>
                   <select
                     id="event-status"
-                    className="w-full rounded-md border border-input bg-background px-3 h-10 text-foreground"
+                    className="w-full rounded-md border border-input bg-background px-3 h-8 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     value={eventData.status || "Scheduled"}
                     onChange={(e) => setEventData({
                       ...eventData, 
@@ -512,80 +522,54 @@ const EventManagement = ({ searchQuery, filterStatus }: EventManagementProps) =>
                 </div>
                 
                 <div>
-                  <Label htmlFor="event-attendees" className="text-foreground">Expected Attendees</Label>
+                  <Label htmlFor="event-attendees" className="text-xs font-medium text-foreground mb-1.5 block">
+                    Expected Attendees
+                  </Label>
                   <Input
                     id="event-attendees"
                     type="number"
+                    min="0"
                     value={eventData.attendees?.toString() || "0"}
                     onChange={(e) => setEventData({...eventData, attendees: parseInt(e.target.value) || 0})}
-                    placeholder="Expected number of attendees"
+                    placeholder="Expected number"
+                    className="text-xs h-8"
                   />
                 </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="event-description" className="text-foreground">Description</Label>
-                <textarea
-                  id="event-description"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[80px] text-foreground"
-                  value={eventData.description || ""}
-                  onChange={(e) => setEventData({...eventData, description: e.target.value})}
-                  placeholder="Event description"
-                />
               </div>
             </div>
           </div>
           
-          <div className="flex gap-2 justify-end">
+          {/* Action Buttons */}
+          <div className="flex gap-2 justify-end pt-4 border-t border-border">
             <Button
               variant="outline"
-              onClick={() => setEventEditorOpen(false)}
+              onClick={() => {
+                setEventEditorOpen(false);
+                resetEventData();
+              }}
+              className="text-xs h-8 px-4"
             >
               Cancel
             </Button>
             <Button
-              onClick={isEditing ? handleEditEvent : handleAddEvent}
-              disabled={loading}
+              onClick={isEditing ? handleUpdateEvent : handleAddEvent}
+              disabled={loading || !eventData.title?.trim()}
+              className="text-xs h-8 px-4"
             >
-              {isEditing ? "Update Event" : "Add Event"}
+              {loading ? (
+                <>
+                  <RefreshCw className="w-3 h-3 mr-1.5 animate-spin" />
+                  {isEditing ? "Updating..." : "Creating..."}
+                </>
+              ) : (
+                <>
+                  {isEditing ? "Update Event" : "Create Event"}
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-      
-      <div className="mt-4 border-t border-border pt-4">
-        <h3 className="font-medium mb-2 text-foreground">Event Management Actions</h3>
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            className="flex items-center justify-center gap-2"
-            onClick={() => {
-              if (events.length === 0) {
-                toast.error("Add events first to manage them");
-                return;
-              }
-              toast.info("Select an event from the list to edit it");
-            }}
-          >
-            <Calendar className="w-4 h-4" />
-            <span>Manage Schedule</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="flex items-center justify-center gap-2"
-            onClick={() => {
-              if (events.length === 0) {
-                toast.error("Add events first before promoting them");
-                return;
-              }
-              toast.info("Feature to promote events coming soon");
-            }}
-          >
-            <MapPin className="w-4 h-4" />
-            <span>Promote Events</span>
-          </Button>
-        </div>
-      </div>
       
       {/* Display alert if no events */}
       {events.length === 0 && !loading && (

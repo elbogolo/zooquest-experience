@@ -77,119 +77,108 @@ const AdminPage = () => {
       <PageHeader title="Admin Panel" showBackButton />
       
       <div className="pt-16 px-4 pb-16">
-        <div className="mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-            <h1 className="text-2xl font-bold text-foreground">Zoo Management</h1>
+        <div className="mb-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+            <h1 className="text-lg font-bold text-foreground">Zoo Management</h1>
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 h-8 text-xs px-3"
+                onClick={() => navigate('/')}
+              >
+                <span>← Back to Home</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1 h-8 text-xs px-3"
                 onClick={handleRefreshData}
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="w-3 h-3" />
                 <span className="hidden sm:inline">Refresh</span>
               </Button>
               <Button 
                 onClick={handleAddItem} 
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 h-8 text-xs px-3"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3 h-3" />
                 <span>Add New</span>
               </Button>
             </div>
           </div>
-          
+
+          {/* Search and Filter Bar */}
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3 h-3" />
               <Input
-                type="text"
                 placeholder={`Search ${activeTab}...`}
-                className="pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-8 text-xs"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <select 
-                className="border rounded-md px-3 py-2 text-sm bg-background text-foreground"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1 h-8 text-xs px-3"
+                onClick={() => setFilterStatus(filterStatus === "all" ? "active" : "all")}
               >
-                <option value="all">All Statuses</option>
-                <option value="healthy">Healthy</option>
-                <option value="under observation">Under Observation</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="sent">Sent</option>
-                <option value="draft">Draft</option>
-                <option value="active">Active</option>
-              </select>
+                <Filter className="w-3 h-3" />
+                {filterStatus === "all" ? "All" : "Active"}
+              </Button>
             </div>
           </div>
-        </div>
-        
-        <Tabs defaultValue="animals" onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 mb-4 bg-muted">
-            <TabsTrigger value="animals">
-              <span className="flex items-center gap-1">
-                <span className="hidden sm:inline">Animals</span>
-                <span className="inline sm:hidden">🦁</span>
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="events">
-              <span className="flex items-center gap-1">
-                <span className="hidden sm:inline">Events</span>
-                <span className="inline sm:hidden">🎪</span>
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications">
-              <span className="flex items-center gap-1">
-                <span className="hidden sm:inline">Alerts</span>
-                <span className="inline sm:hidden">🔔</span>
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="settings">
-              <span className="flex items-center gap-1">
-                <span className="hidden sm:inline">Settings</span>
-                <span className="inline sm:hidden">⚙️</span>
-              </span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="animals" className="mt-0">
-            <AnimalManagement searchQuery={searchQuery} filterStatus={filterStatus} />
-          </TabsContent>
-          
-          <TabsContent value="events" className="mt-0">
-            <EventManagement searchQuery={searchQuery} filterStatus={filterStatus} />
-          </TabsContent>
-          
-          <TabsContent value="notifications" className="mt-0">
-            <div id="notification-management">
-              <NotificationManagement searchQuery={searchQuery} filterStatus={filterStatus} />
+
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4 h-9">
+              <TabsTrigger value="animals" className="text-xs h-7">
+                Animals
+              </TabsTrigger>
+              <TabsTrigger value="events" className="text-xs h-7">
+                Events
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="text-xs h-7">
+                Alerts
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="text-xs h-7">
+                Settings
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="mt-4">
+              <TabsContent value="animals" className="mt-0">
+                <AnimalManagement 
+                  searchQuery={searchQuery} 
+                  filterStatus={filterStatus}
+                />
+              </TabsContent>
+
+              <TabsContent value="events" className="mt-0">
+                <EventManagement 
+                  searchQuery={searchQuery} 
+                  filterStatus={filterStatus}
+                />
+              </TabsContent>
+
+              <TabsContent value="notifications" className="mt-0">
+                <NotificationManagement 
+                  searchQuery={searchQuery} 
+                  filterStatus={filterStatus}
+                />
+              </TabsContent>
+
+              <TabsContent value="settings" className="mt-0">
+                <AdminSettings 
+                  searchQuery={searchQuery} 
+                  filterStatus={filterStatus}
+                />
+              </TabsContent>
             </div>
-          </TabsContent>
-          
-          <TabsContent value="settings" className="mt-0">
-            <AdminSettings searchQuery={searchQuery} filterStatus={filterStatus} />
-          </TabsContent>
-        </Tabs>
-        
-        {/* Footer status bar - fixed at bottom */}
-      </div>
-      
-      <div className="fixed bottom-0 left-0 right-0 bg-card dark:bg-card border-t border-border dark:border-border p-3 shadow-sm flex flex-wrap justify-between items-center text-sm text-muted-foreground z-10">
-        <div className="flex items-center gap-2">
-          <Info className="h-4 w-4" />
-          <span>Last updated: Today at {new Date().toLocaleTimeString()}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <Check className="h-4 w-4 text-green-600" />
-            <span>System status: Online</span>
-          </div>
+          </Tabs>
         </div>
       </div>
     </div>

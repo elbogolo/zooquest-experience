@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "664605890086",
+    "project_id": "zooapp-f5766",
+    "storage_bucket": "zooapp-f5766.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:664605890086:android:6e8f4d642cae02286378e7",
+        "android_client_info": {
+          "package_name": "app.lovable.d86b7ae12aab484581780140b755e651"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "664605890086-uvs7ek71o7d0lpf0m613qjb59ss9tl8d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAoZVG2nPUcFFW_LUA-yvk2oLPxF8zGsGw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "664605890086-uvs7ek71o7d0lpf0m613qjb59ss9tl8d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

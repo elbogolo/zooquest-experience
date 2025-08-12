@@ -5,6 +5,8 @@ export interface User {
   email: string;
   avatar?: string;
   isAdmin: boolean;
+  emailVerified: boolean;
+  createdAt?: string; // Added to distinguish between existing and new users
 }
 
 // Auth context interface
@@ -15,7 +17,8 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<User>;
   signUp: (email: string, password: string, name: string) => Promise<User>;
   loginWithGoogle: () => Promise<User>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => void;
-  resetPassword: (email: string) => Promise<boolean>;
+  resetPassword: (email: string) => Promise<void>;
+  sendEmailVerification: () => Promise<void>;
 }
